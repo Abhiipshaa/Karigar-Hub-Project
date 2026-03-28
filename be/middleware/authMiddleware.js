@@ -6,7 +6,7 @@ const protect = (req, res, next) => {
         return res.status(401).json({ message: "Not authorized, no token" });
 
     try {
-        const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET_KEY);
+        const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
         req.user = decoded;
         next();
     } catch {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X, ChevronDown, SlidersHorizontal } from 'lucide-react';
-import { categories, products as sampleProducts } from '../data/sampleData';
+import { categories } from '../data/sampleData';
 import { getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { SectionHeader } from '../components/UI';
@@ -30,12 +30,8 @@ export default function Products() {
   useEffect(() => {
     setLoading(true);
     getProducts()
-      .then(data => {
-        // API integrated here — fallback to sampleData if DB is empty
-        const list = Array.isArray(data) && data.length > 0 ? data : sampleProducts;
-        setProducts(list);
-      })
-      .catch(() => setProducts(sampleProducts))
+      .then(data => setProducts(Array.isArray(data) ? data : []))
+      .catch(() => setError('Failed to load products.'))
       .finally(() => setLoading(false));
   }, []);
 

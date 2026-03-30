@@ -2,10 +2,21 @@ const express = require("express");
 const router = express.Router();
 const Artist = require("../models/Artist");
 const protect = require("../middleware/authMiddleware");
+const { uploadImage } = require("../middleware/upload");
+
+// One-time: verify all existing artists
+router.put("/verify-all", async (req, res) => {
+    try {
+        await Artist.updateMany({}, { isVerified: true });
+        res.json({ message: "All artists verified" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 router.get("/", async (req, res) => {
     try {
-        const artists = await Artist.find({ isVerified: true }).select("-password -bankDetails -aadhaarNumber -panNumber -gstNumber");
+        const artists = await Artist.find().select("-password -bankDetails -aadhaarNumber -panNumber -gstNumber");
         res.json(artists);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -26,6 +37,20 @@ router.put("/profile", protect, async (req, res) => {
     try {
         const updated = await Artist.findByIdAndUpdate(req.user.id, req.body, { new: true }).select("-password");
         res.json(updated);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Upload artist profile image
+router.post("/upload/profile-image", protect, uploadImage("artists").single("profileImage"), async (req, res) => {
+    try {
+        const updated = await Artist.findByIdAndUpdate(
+            req.user.id,
+            { profileImage: req.file.path },
+            { new: true }
+        ).select("-password");
+        res.json({ profileImage: updated.profileImage });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

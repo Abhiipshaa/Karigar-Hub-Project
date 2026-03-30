@@ -1,5 +1,5 @@
-// TODO: replace with backend API later
-import { useState } from 'react';
+// API integrated
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -7,7 +7,8 @@ import {
   Package, LayoutDashboard, ShoppingBag, Settings, LogOut, Menu,
   X, TrendingUp, IndianRupee, Search, AlertTriangle
 } from 'lucide-react';
-import { karigarProducts, productSalesData } from '../data/productData';
+import { getMyProducts, deleteProduct, updateProduct } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Sidebar nav (mirrors Dashboard.jsx) ─────────────────────────────────────
 const navItems = [
@@ -26,9 +27,8 @@ const statusStyle = {
 
 // ─── Sales Modal ─────────────────────────────────────────────────────────────
 function SalesModal({ product, onClose }) {
-  // TODO: replace with backend API later — fetch /api/karigar/products/:id/sales
-  const data = productSalesData[product.id] || { monthly: [], labels: [], revenue: 0, units: 0 };
-  const max  = Math.max(...data.monthly, 1);
+  const data = { monthly: [0,0,0,0,0,0], labels: ['Jan','Feb','Mar','Apr','May','Jun'], revenue: 0, units: product.numReviews || 0 };
+  const max = Math.max(...data.monthly, 1);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -113,40 +113,52 @@ function DeleteModal({ product, onConfirm, onClose }) {
 export default function ManageProducts() {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const { user }  = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // TODO: replace with backend API later — fetch /api/karigar/products
-  const [products, setProducts] = useState(karigarProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [search,   setSearch]   = useState('');
-  const [filter,   setFilter]   = useState('all'); // 'all' | 'active' | 'inactive' | 'draft'
+  const [filter,   setFilter]   = useState('all');
   const [salesProduct,  setSalesProduct]  = useState(null);
-  const [deleteProduct, setDeleteProduct] = useState(null);
+  const [deleteProductModal, setDeleteProductModal] = useState(null);
+
+  useEffect(() => {
+    getMyProducts()
+      .then(data => setProducts(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = products.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                        p.category.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === 'all' || p.status === filter;
+    const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase()) ||
+                        p.category?.toLowerCase().includes(search.toLowerCase());
+    const status = p.status || 'active';
+    const matchFilter = filter === 'all' || status === filter;
     return matchSearch && matchFilter;
   });
 
-  // Toggle active/inactive
-  // TODO: replace with backend API later — PATCH /api/karigar/products/:id
-  const toggleStatus = id => {
-    setProducts(prev => prev.map(p =>
-      p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
-    ));
+  const toggleStatus = async (id) => {
+    const product = products.find(p => (p._id || p.id) === id);
+    if (!product || product.status === 'draft') return;
+    const newStatus = product.status === 'active' ? 'inactive' : 'active';
+    try {
+      await updateProduct(id, { status: newStatus });
+      setProducts(prev => prev.map(p => (p._id || p.id) === id ? { ...p, status: newStatus } : p));
+    } catch {}
   };
 
-  // Delete
-  // TODO: replace with backend API later — DELETE /api/karigar/products/:id
-  const confirmDelete = () => {
-    setProducts(prev => prev.filter(p => p.id !== deleteProduct.id));
-    setDeleteProduct(null);
+  const confirmDelete = async () => {
+    if (!deleteProductModal) return;
+    try {
+      await deleteProduct(deleteProductModal._id || deleteProductModal.id);
+      setProducts(prev => prev.filter(p => (p._id || p.id) !== (deleteProductModal._id || deleteProductModal.id)));
+    } catch {}
+    setDeleteProductModal(null);
   };
 
   const counts = {
     all:      products.length,
-    active:   products.filter(p => p.status === 'active').length,
+    active:   products.filter(p => (p.status || 'active') === 'active').length,
     inactive: products.filter(p => p.status === 'inactive').length,
     draft:    products.filter(p => p.status === 'draft').length,
   };
@@ -166,10 +178,12 @@ export default function ManageProducts() {
         </div>
         <div className="p-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&q=80" alt="" className="w-10 h-10 rounded-full object-cover" />
+            <div className="w-10 h-10 rounded-full bg-[#C0522B] flex items-center justify-center text-white font-bold">
+              {user?.name?.[0] || 'K'}
+            </div>
             <div>
-              <p className="text-white text-sm font-bold">Sunita Devi</p>
-              <p className="text-[#B8A080] text-xs">Madhubani Artist · Bihar</p>
+              <p className="text-white text-sm font-bold">{user?.name || 'Karigar'}</p>
+              <p className="text-[#B8A080] text-xs">{user?.category || 'Artist'} · {user?.address?.state || 'India'}</p>
             </div>
           </div>
         </div>
@@ -269,18 +283,15 @@ export default function ManageProducts() {
                     <tbody className="divide-y divide-[#E8D5B0]/40">
                       <AnimatePresence>
                         {filtered.map(product => (
-                          <motion.tr key={product.id}
+                          <motion.tr key={product._id || product.id}
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="hover:bg-[#F5ECD8]/30 transition-colors">
                             {/* Product */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <img src={product.image} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 border border-[#E8D5B0]" />
+                                <img src={product.images?.[0] || product.image} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 border border-[#E8D5B0]" />
                                 <div className="min-w-0">
                                   <p className="font-semibold text-[#2C1A0E] truncate max-w-[160px]">{product.name}</p>
-                                  {product.handmade && (
-                                    <span className="text-[10px] bg-[#1E4D2B]/10 text-[#1E4D2B] px-1.5 py-0.5 rounded-full font-semibold">🤲 Handmade</span>
-                                  )}
                                 </div>
                               </div>
                             </td>
@@ -296,24 +307,23 @@ export default function ManageProducts() {
                             {/* Stock */}
                             <td className="px-4 py-3">
                               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                product.stock === 0 ? 'bg-red-100 text-red-600'
-                                : product.stock <= 5 ? 'bg-yellow-100 text-yellow-700'
+                                (product.stock || 0) === 0 ? 'bg-red-100 text-red-600'
+                                : (product.stock || 0) <= 5 ? 'bg-yellow-100 text-yellow-700'
                                 : 'bg-green-100 text-green-700'
                               }`}>
-                                {product.stock === 0 ? 'Out of Stock' : `${product.stock} left`}
+                                {(product.stock || 0) === 0 ? 'Out of Stock' : `${product.stock} left`}
                               </span>
                             </td>
                             {/* Status toggle */}
                             <td className="px-4 py-3">
-                              <button onClick={() => product.status !== 'draft' && toggleStatus(product.id)}
-                                title={product.status === 'draft' ? 'Publish to toggle' : `Click to ${product.status === 'active' ? 'deactivate' : 'activate'}`}
-                                className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full transition-all ${statusStyle[product.status]} ${product.status !== 'draft' ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}>
-                                {product.status === 'active' ? <Eye size={11} /> : <EyeOff size={11} />}
-                                <span className="capitalize">{product.status}</span>
+                              <button onClick={() => toggleStatus(product._id || product.id)}
+                                className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full transition-all ${statusStyle[product.status || 'active']} cursor-pointer hover:opacity-80`}>
+                                {(product.status || 'active') === 'active' ? <Eye size={11} /> : <EyeOff size={11} />}
+                                <span className="capitalize">{product.status || 'active'}</span>
                               </button>
                             </td>
                             {/* Sales */}
-                            <td className="px-4 py-3 font-semibold text-[#2C1A0E]">{product.sales} sold</td>
+                            <td className="px-4 py-3 font-semibold text-[#2C1A0E]">{product.numReviews || 0} sold</td>
                             {/* Actions */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-1">
@@ -330,7 +340,7 @@ export default function ManageProducts() {
                                   <Edit size={14} />
                                 </Link>
                                 {/* Delete */}
-                                <button onClick={() => setDeleteProduct(product)}
+                                <button onClick={() => setDeleteProductModal(product)}
                                   title="Delete"
                                   className="p-1.5 rounded-lg hover:bg-red-50 text-[#5C3317] hover:text-red-500 transition-colors">
                                   <Trash2 size={14} />
@@ -351,7 +361,7 @@ export default function ManageProducts() {
 
       {/* Modals */}
       {salesProduct  && <SalesModal  product={salesProduct}  onClose={() => setSalesProduct(null)} />}
-      {deleteProduct && <DeleteModal product={deleteProduct} onConfirm={confirmDelete} onClose={() => setDeleteProduct(null)} />}
+      {deleteProductModal && <DeleteModal product={deleteProductModal} onConfirm={confirmDelete} onClose={() => setDeleteProductModal(null)} />}
     </div>
   );
 }

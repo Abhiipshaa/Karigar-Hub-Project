@@ -1,15 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { getAllUsers, getAllArtists, verifyArtist, getAllOrders, deleteUser } = require("../controllers/adminController");
+const { adminLogin, seedAdmin, getAllUsers, getAllArtists, verifyArtist, getAllOrders, deleteUser } = require("../controllers/adminController");
 const protect = require("../middleware/authMiddleware");
 const adminOnly = require("../middleware/adminMiddleware");
 
-router.use(protect, adminOnly);
+// ── Public routes (no token required) ────────────────────────────────────────
+router.post("/login", adminLogin);
+router.post("/seed", seedAdmin);
 
-router.get("/users", getAllUsers);
-router.delete("/users/:id", deleteUser);
-router.get("/artists", getAllArtists);
-router.put("/artists/:id/verify", verifyArtist);
-router.get("/orders", getAllOrders);
+// ── Protected routes (token + admin role required) ────────────────────────────
+router.get("/users", protect, adminOnly, getAllUsers);
+router.delete("/users/:id", protect, adminOnly, deleteUser);
+router.get("/artists", protect, adminOnly, getAllArtists);
+router.put("/artists/:id/verify", protect, adminOnly, verifyArtist);
+router.get("/orders", protect, adminOnly, getAllOrders);
 
 module.exports = router;

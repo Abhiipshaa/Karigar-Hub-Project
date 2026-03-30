@@ -20,6 +20,8 @@ import Orders from './pages/Orders';
 import Terms from './pages/Terms';
 import RefundPolicy from './pages/RefundPolicy';
 import UserProfile from './pages/UserProfile';
+import States from './pages/States';
+import StateKarigars from './pages/StateKarigars';
 
 
 const noLayoutRoutes = ['/login', '/register', '/dashboard'];  // dashboard/* also matched via startsWith
@@ -56,6 +58,8 @@ function AppLayout() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/profile" element={<UserProfile />} />
+              <Route path="/states" element={<States />} />
+              <Route path="/states/:state" element={<StateKarigars />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </motion.div>

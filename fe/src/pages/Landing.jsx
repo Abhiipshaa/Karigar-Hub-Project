@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
-import { ArrowRight, Sparkles, Leaf, Globe2, Gift, ChevronLeft, ChevronRight, ChevronDown, Quote, Star } from 'lucide-react';
-import { categories, artisans, products, testimonials, stats, howItWorks, states, festivals } from '../data/sampleData';
+import { ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Quote } from 'lucide-react';
+import { categories, testimonials, stats, howItWorks, states, festivals } from '../data/sampleData';
+import { getProducts, getArtisans } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import ArtisanCard from '../components/ArtisanCard';
 import { SectionHeader } from '../components/UI';
@@ -41,6 +42,13 @@ const floatingBadges = [
 export default function Landing() {
   const [tIdx, setTIdx] = useState(0);
   const [showAllStates, setShowAllStates] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [featuredArtisans, setFeaturedArtisans] = useState([]);
+
+  useEffect(() => {
+    getProducts().then(data => setFeaturedProducts(Array.isArray(data) ? data.slice(0, 4) : [])).catch(() => {});
+    getArtisans().then(data => setFeaturedArtisans(Array.isArray(data) ? data.slice(0, 3) : [])).catch(() => {});
+  }, []);
 
   return (
     <div className="overflow-x-hidden">
@@ -136,7 +144,7 @@ export default function Landing() {
             {(showAllStates ? states : states.slice(0, 8)).map((s, i) => (
               <motion.div key={s.name} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.07 }}>
-                <Link to="/products"
+                <Link to={`/states/${encodeURIComponent(s.name)}`}
                   className="group relative block rounded-2xl overflow-hidden aspect-square hover:shadow-xl transition-shadow">
                   <img src={s.image} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1E0E06]/80 via-[#1E0E06]/20 to-transparent" />
@@ -171,10 +179,12 @@ export default function Landing() {
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {products.filter(p => p.featured).map((product, i) => (
-              <motion.div key={product.id} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+            {featuredProducts.length === 0 ? (
+              <div className="col-span-4 text-center py-12 text-[#7B5C3A]">No products yet. Be the first to add one!</div>
+            ) : featuredProducts.map((product, i) => (
+              <motion.div key={product._id} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                <ProductCard product={product} />
+                <ProductCard product={{ ...product, id: product._id, image: product.images?.[0], artisan: product.artist?.name }} />
               </motion.div>
             ))}
           </div>
@@ -216,10 +226,12 @@ export default function Landing() {
             title="Meet the Makers"
             subtitle="Behind every product is a karigar with a story. Discover the hands and hearts that craft your treasures." />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {artisans.filter(a => a.featured).map((artisan, i) => (
-              <motion.div key={artisan.id} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+            {featuredArtisans.length === 0 ? (
+              <div className="col-span-3 text-center py-12 text-[#7B5C3A]">No karigars yet. Invite artisans to join!</div>
+            ) : featuredArtisans.map((artisan, i) => (
+              <motion.div key={artisan._id} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                <ArtisanCard artisan={artisan} />
+                <ArtisanCard artisan={{ ...artisan, id: artisan._id, state: artisan.address?.state, city: artisan.address?.city, craft: artisan.category }} />
               </motion.div>
             ))}
           </div>

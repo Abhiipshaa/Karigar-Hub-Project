@@ -1,22 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Heart, Sparkles, Leaf, ChevronRight, MessageSquare, MapPin, Award } from 'lucide-react';
-import { products, artisans, reviews } from '../data/sampleData';
+import { getProduct, getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { StarRating, Badge } from '../components/UI';
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const product = products.find(p => p.id === Number(id)) || products[0];
-  const artisan = artisans.find(a => a.id === product.artisanId);
-  const related = products.filter(p => p.id !== product.id && p.category === product.category).slice(0, 3);
+  const [product, setProduct] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [customNote, setCustomNote] = useState('');
   const [added, setAdded] = useState(false);
 
+  useEffect(() => {
+    getProduct(id)
+      .then(data => {
+        setProduct(data);
+        if (data.category) {
+          getProducts({ category: data.category })
+            .then(all => setRelated((Array.isArray(all) ? all : []).filter(p => p._id !== data._id).slice(0, 3)))
+            .catch(() => {});
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [id]);
+
   const handleAdd = () => { setAdded(true); setTimeout(() => setAdded(false), 2000); };
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#FDF6EC] pt-24 flex items-center justify-center">
+      <div className="animate-pulse text-[#C0522B] text-lg font-display">Loading...</div>
+    </div>
+  );
+
+  if (!product) return (
+    <div className="min-h-screen bg-[#FDF6EC] pt-24 flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-5xl mb-4">🔍</p>
+        <h3 className="font-display text-2xl font-bold text-[#2C1A0E] mb-2">Product not found</h3>
+        <Link to="/products" className="text-[#C0522B] font-semibold hover:underline">Browse all products</Link>
+      </div>
+    </div>
+  );
+
+  const artisan = product.artist;
 
   return (
     <div className="min-h-screen bg-[#FDF6EC] pt-24 pb-16">
@@ -35,7 +67,10 @@ export default function ProductDetail() {
           <div>
             <motion.div key={activeImg} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="aspect-square rounded-3xl overflow-hidden bg-[#F5ECD8] mb-4">
-              <img src={product.images?.[activeImg] || product.image} alt={product.name} className="w-full h-full object-cover" />
+              {product.images?.[activeImg]
+                ? <img src={product.images[activeImg]} alt={product.name} className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-6xl">🎨</div>
+              }
             </motion.div>
             {product.images?.length > 1 && (
               <div className="flex gap-3">
@@ -52,39 +87,24 @@ export default function ProductDetail() {
           {/* Info */}
           <div>
             <div className="flex flex-wrap gap-2 mb-4">
-              <Badge variant="default">{product.category}</Badge>
-              <Badge variant="terracotta"><MapPin size={10} /> {product.state}</Badge>
+              {product.category && <Badge variant="default">{product.category}</Badge>}
               {product.customizable && <Badge variant="green"><Sparkles size={10} /> Customizable</Badge>}
-              {!product.inStock && <Badge variant="maroon">Sold Out</Badge>}
+              {product.stock === 0 && <Badge variant="maroon">Sold Out</Badge>}
             </div>
 
             <h1 className="font-display text-3xl md:text-4xl font-bold text-[#2C1A0E] mb-3 leading-tight">{product.name}</h1>
 
             <div className="flex items-center gap-3 mb-4">
-              <StarRating rating={product.rating} />
-              <span className="text-sm font-bold text-[#2C1A0E]">{product.rating}</span>
-              <span className="text-sm text-[#7B5C3A]">({product.reviews} reviews)</span>
+              <StarRating rating={product.ratings || 0} />
+              <span className="text-sm font-bold text-[#2C1A0E]">{product.ratings || 0}</span>
+              <span className="text-sm text-[#7B5C3A]">({product.numReviews || 0} reviews)</span>
             </div>
 
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="font-display text-4xl font-bold text-[#2C1A0E]">₹{product.price.toLocaleString('en-IN')}</span>
-              {product.originalPrice && (
-                <span className="text-xl text-[#7B5C3A] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
-              )}
-              {product.originalPrice && (
-                <span className="text-sm font-bold text-[#1E4D2B] bg-[#1E4D2B]/10 px-2 py-0.5 rounded-full">
-                  {Math.round((1 - product.price / product.originalPrice) * 100)}% off
-                </span>
-              )}
+              <span className="font-display text-4xl font-bold text-[#2C1A0E]">₹{product.price?.toLocaleString('en-IN')}</span>
             </div>
 
-            <p className="text-[#5C3317] leading-relaxed mb-5">{product.description}</p>
-
-            <div className="flex flex-wrap gap-2 mb-6">
-              {product.tags.map(tag => (
-                <span key={tag} className="text-xs bg-[#E8D5B0]/60 text-[#5C3317] px-3 py-1 rounded-full">#{tag}</span>
-              ))}
-            </div>
+            <p className="text-[#5C3317] leading-relaxed mb-6">{product.description}</p>
 
             {/* Qty + Add to Cart */}
             <div className="flex items-center gap-4 mb-4">
@@ -93,14 +113,14 @@ export default function ProductDetail() {
                 <span className="px-4 py-3 font-bold text-[#2C1A0E] min-w-[3rem] text-center">{qty}</span>
                 <button onClick={() => setQty(q => q + 1)} className="px-4 py-3 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors font-bold">+</button>
               </div>
-              <button onClick={handleAdd} disabled={!product.inStock}
+              <button onClick={handleAdd} disabled={product.stock === 0}
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full font-bold transition-all ${
-                  product.inStock
+                  product.stock > 0
                     ? added ? 'bg-[#1E4D2B] text-white' : 'bg-[#C0522B] text-white hover:bg-[#9A3E1E] shadow-md'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}>
                 <ShoppingBag size={18} />
-                {added ? 'Cart में जोड़ा! ✓' : product.inStock ? 'Cart में जोड़ें' : 'Out of Stock'}
+                {added ? 'Cart में जोड़ा! ✓' : product.stock > 0 ? 'Cart में जोड़ें' : 'Out of Stock'}
               </button>
               <button className="w-12 h-12 rounded-full border border-[#E8D5B0] flex items-center justify-center hover:border-[#C0522B] hover:text-[#C0522B] transition-colors">
                 <Heart size={18} />
@@ -121,10 +141,12 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Impact */}
+            {/* Stock info */}
             <div className="flex items-start gap-3 bg-[#1E4D2B]/8 border border-[#1E4D2B]/20 rounded-2xl p-4">
               <Leaf size={18} className="text-[#1E4D2B] mt-0.5 shrink-0" />
-              <p className="text-sm text-[#1E4D2B] leading-relaxed">{product.impact}</p>
+              <p className="text-sm text-[#1E4D2B] leading-relaxed">
+                {product.stock > 0 ? `${product.stock} items in stock. Handmade — each piece is unique.` : 'Currently out of stock. Check back soon!'}
+              </p>
             </div>
           </div>
         </div>
@@ -134,18 +156,23 @@ export default function ProductDetail() {
           <div className="bg-white rounded-3xl border border-[#E8D5B0]/60 p-8 mb-12">
             <h2 className="font-display text-2xl font-bold text-[#2C1A0E] mb-6">कारीगर की कहानी — Artisan Story</h2>
             <div className="flex flex-col sm:flex-row gap-6 items-start">
-              <img src={artisan.avatar} alt={artisan.name} className="w-20 h-20 rounded-full object-cover shrink-0 border-2 border-[#E8D5B0]" />
+              <div className="w-20 h-20 rounded-full border-2 border-[#E8D5B0] bg-[#C0522B] flex items-center justify-center text-white text-2xl font-bold font-display shrink-0 overflow-hidden">
+                {artisan.profileImage
+                  ? <img src={artisan.profileImage} alt={artisan.name} className="w-full h-full object-cover" />
+                  : artisan.name?.[0]?.toUpperCase()
+                }
+              </div>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3 mb-1">
                   <h3 className="font-display text-xl font-bold text-[#2C1A0E]">{artisan.name}</h3>
-                  <span className="text-xs bg-[#C0522B]/10 text-[#C0522B] px-2 py-0.5 rounded-full font-semibold">{artisan.craft}</span>
+                  <span className="text-xs bg-[#C0522B]/10 text-[#C0522B] px-2 py-0.5 rounded-full font-semibold">{artisan.category}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-[#7B5C3A] mb-3">
-                  <span className="flex items-center gap-1"><MapPin size={12} /> {artisan.city}, {artisan.state}</span>
-                  <span className="flex items-center gap-1"><Award size={12} /> {artisan.experience}</span>
+                  {artisan.address?.city && <span className="flex items-center gap-1"><MapPin size={12} /> {artisan.address.city}, {artisan.address.state}</span>}
+                  {artisan.isVerified && <span className="flex items-center gap-1"><Award size={12} /> Verified</span>}
                 </div>
-                <p className="text-[#5C3317] leading-relaxed mb-4 italic font-display">"{artisan.story}"</p>
-                <Link to={`/artisans/${artisan.id}`}
+                {artisan.bio && <p className="text-[#5C3317] leading-relaxed mb-4 italic font-display">"{artisan.bio}"</p>}
+                <Link to={`/artisans/${artisan._id}`}
                   className="inline-flex items-center gap-1 text-[#C0522B] font-semibold text-sm hover:gap-2 transition-all">
                   Full Profile देखें <ChevronRight size={14} />
                 </Link>
@@ -154,32 +181,14 @@ export default function ProductDetail() {
           </div>
         )}
 
-        {/* Reviews */}
-        <div className="mb-12">
-          <h2 className="font-display text-2xl font-bold text-[#2C1A0E] mb-6">Customer Reviews</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {reviews.map(review => (
-              <div key={review.id} className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <img src={review.avatar} alt={review.user} className="w-10 h-10 rounded-full object-cover" />
-                  <div>
-                    <p className="font-semibold text-[#2C1A0E] text-sm">{review.user}</p>
-                    <p className="text-xs text-[#7B5C3A]">{review.date}</p>
-                  </div>
-                </div>
-                <StarRating rating={review.rating} size={12} />
-                <p className="text-sm text-[#5C3317] mt-2 leading-relaxed">{review.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Related */}
         {related.length > 0 && (
           <div>
             <h2 className="font-display text-2xl font-bold text-[#2C1A0E] mb-6">आपको यह भी पसंद आ सकता है</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {related.map(p => <ProductCard key={p.id} product={p} />)}
+              {related.map(p => (
+                <ProductCard key={p._id} product={{ ...p, id: p._id, image: p.images?.[0] }} />
+              ))}
             </div>
           </div>
         )}

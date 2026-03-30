@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const protect = require("../middleware/authMiddleware");
+const { uploadImage } = require("../middleware/upload");
 
 router.get("/profile", protect, async (req, res) => {
     try {
@@ -17,6 +18,19 @@ router.put("/profile", protect, async (req, res) => {
     try {
         const updated = await User.findByIdAndUpdate(req.user.id, req.body, { new: true }).select("-password");
         res.json(updated);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post("/upload/profile-image", protect, uploadImage("users").single("profileImage"), async (req, res) => {
+    try {
+        const updated = await User.findByIdAndUpdate(
+            req.user.id,
+            { profileImage: req.file.path },
+            { new: true }
+        ).select("-password");
+        res.json({ profileImage: updated.profileImage });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

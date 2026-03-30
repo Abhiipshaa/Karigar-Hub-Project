@@ -11,7 +11,6 @@ router.post("/user/login", loginUser);
 router.post("/artist/register", registerArtist);
 router.post("/artist/login", loginArtist);
 
-// Unified routes used by frontend api.js
 // POST /api/auth/register — role field determines user or artist
 router.post("/register", async (req, res) => {
     const { role } = req.body;

@@ -4,6 +4,8 @@ import {
   User, Briefcase, MapPin, Image, BookOpen, Settings,
   Shield, ChevronRight, ChevronLeft, Upload, X, Check, Eye, EyeOff
 } from 'lucide-react';
+import { register, uploadArtistProfileImage } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const STEPS = [
   { id: 1, label: 'Basic Info',    icon: User },
@@ -102,8 +104,11 @@ function FileUpload({ label, multiple, accept, files, setFiles, hint }) {
 }
 
 export default function KarigarSignup({ onSubmit, showPass, setShowPass }) {
+  const { saveUser } = useAuth();
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Step 1 — Basic Info
   const [basic, setBasic] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
@@ -136,6 +141,64 @@ export default function KarigarSignup({ onSubmit, showPass, setShowPass }) {
   const [agreed, setAgreed] = useState(false);
 
   const go = d => { setDir(d); setStep(s => s + d); };
+
+  const handleFinalSubmit = async () => {
+    if (!agreed) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const data = await register({
+        name: `${basic.firstName} ${basic.lastName}`.trim(),
+        email: basic.email,
+        phone: basic.phone,
+        password: basic.password,
+        businessName: biz.shopName,
+        category: biz.craftCategory,
+        bio: bio.bio,
+        address: {
+          addressLine: addr.line1,
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.pincode,
+        },
+        gstNumber: biz.gst || undefined,
+        aadhaarNumber: verify.aadhaar || undefined,
+        panNumber: verify.pan || undefined,
+        bankDetails: verify.bankName ? {
+          accountHolderName: basic.firstName + ' ' + basic.lastName,
+          bankName: verify.bankName,
+          accountNumber: verify.accountNo,
+          ifscCode: verify.ifsc,
+        } : { accountHolderName: basic.firstName, bankName: 'N/A', accountNumber: '0', ifscCode: 'N/A' },
+        role: 'artist',
+      });
+      saveUser(data);
+      // Upload profile photo to Cloudinary and save to DB
+      if (profilePhoto.length > 0) {
+        try { await uploadArtistProfileImage(profilePhoto[0]); } catch {}
+      }
+      // Upload portfolio images as a showcase product
+      if (portfolioFiles.length > 0) {
+        try {
+          const { uploadProductImages, createProduct } = await import('../services/api');
+          const { urls } = await uploadProductImages(portfolioFiles.slice(0, 5));
+          await createProduct({
+            name: `${biz.shopName || basic.firstName + "'s Work"} — Portfolio`,
+            description: bio.bio || `Handcrafted work by ${basic.firstName} ${basic.lastName}`,
+            category: biz.craftCategory || 'Handloom & Weaving',
+            price: 0,
+            stock: 1,
+            images: urls,
+          });
+        } catch {}
+      }
+      onSubmit();
+    } catch (err) {
+      setSubmitError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const variants = {
     enter: d => ({ x: d > 0 ? 40 : -40, opacity: 0 }),
@@ -476,12 +539,15 @@ export default function KarigarSignup({ onSubmit, showPass, setShowPass }) {
             Continue <ChevronRight size={16} />
           </button>
         ) : (
-          <button type="button" onClick={onSubmit} disabled={!agreed}
+          <button type="button" onClick={handleFinalSubmit} disabled={!agreed || submitting}
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1E4D2B] text-white text-sm font-bold hover:bg-[#163A20] transition-all shadow-md ml-auto disabled:opacity-50 disabled:cursor-not-allowed">
-            Karigar के रूप में जुड़ें <Check size={16} />
+            {submitting ? 'Registering...' : <>Karigar के रूप में जुड़ें <Check size={16} /></>}
           </button>
         )}
       </div>
+      {submitError && (
+        <p className="mt-3 text-sm text-red-500 text-center">{submitError}</p>
+      )}
     </div>
   );
 }

@@ -47,8 +47,11 @@ export default function ProductCard({ product }) {
           {product.originalPrice && (
             <span className="bg-[#C0522B] text-white text-[10px] font-semibold px-2 py-1 rounded-full">Sale</span>
           )}
-          {!product.inStock && (
+          {product.stock === 0 && (
             <span className="bg-gray-600 text-white text-[10px] font-semibold px-2 py-1 rounded-full">Sold Out</span>
+          )}
+          {product.stock > 0 && (
+            <span className="bg-[#1E4D2B] text-white text-[10px] font-semibold px-2 py-1 rounded-full">In Stock</span>
           )}
         </div>
         {/* Wishlist */}

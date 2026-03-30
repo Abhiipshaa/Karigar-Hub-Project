@@ -1,22 +1,66 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, MapPin, ShoppingBag, Heart, Edit3, Save, X, Package, LogOut } from 'lucide-react';
+import { User, Mail, Phone, MapPin, ShoppingBag, Heart, Edit3, Save, X, Package, LogOut, Camera, LayoutDashboard, Plus, Star, Briefcase } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const tabs = ['Overview', 'My Orders', 'Wishlist', 'Settings'];
+import { uploadUserProfileImage, uploadArtistProfileImage, getMyProducts, updateArtistProfile } from '../services/api';
 
 export default function UserProfile() {
-  const { user, logout } = useAuth();
+  const { user, logout, saveUser } = useAuth();
+  const navigate = useNavigate();
+  const isArtist = user?.role === 'artist';
+
+  const tabs = isArtist
+    ? ['Overview', 'My Products', 'Settings']
+    : ['Overview', 'My Orders', 'Wishlist', 'Settings'];
+
   const [activeTab, setActiveTab] = useState('Overview');
   const [editing, setEditing] = useState(false);
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [profileImage, setProfileImage] = useState(user?.profileImage || null);
+  const [products, setProducts] = useState([]);
+  const imgInputRef = useRef();
+
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    city: user?.city || '',
-    state: user?.state || '',
+    bio: user?.bio || '',
+    city: user?.address?.city || '',
+    state: user?.address?.state || '',
   });
+
+  useEffect(() => {
+    if (isArtist && activeTab === 'My Products') {
+      getMyProducts()
+        .then(data => setProducts(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    }
+  }, [activeTab, isArtist]);
+
+  const handleProfileImageChange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setUploadingImg(true);
+      const fn = isArtist ? uploadArtistProfileImage : uploadUserProfileImage;
+      const { profileImage: url } = await fn(file);
+      setProfileImage(url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingImg(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      if (isArtist) {
+        await updateArtistProfile({ name: form.name, phone: form.phone, bio: form.bio });
+      }
+      setEditing(false);
+    } catch {}
+  };
 
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -29,26 +73,50 @@ export default function UserProfile() {
         {/* Profile Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl border border-[#E8D5B0]/60 overflow-hidden mb-6 shadow-sm">
-          <div className="h-28 bg-gradient-to-r from-[#C0522B] to-[#7B1C2E] relative">
+          <div className={`h-28 relative ${isArtist ? 'bg-gradient-to-r from-[#1E4D2B] to-[#C0522B]' : 'bg-gradient-to-r from-[#C0522B] to-[#7B1C2E]'}`}>
             <div className="absolute inset-0 pattern-dots opacity-20" />
+            {isArtist && (
+              <div className="absolute top-4 right-4">
+                <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                  🎨 Karigar
+                </span>
+              </div>
+            )}
           </div>
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-10">
               <div className="flex items-end gap-4">
-                <div className="w-20 h-20 rounded-2xl bg-[#C0522B] border-4 border-white flex items-center justify-center text-white font-bold text-2xl font-display shadow-lg">
-                  {initials}
+                <div className="w-20 h-20 rounded-2xl bg-[#C0522B] border-4 border-white flex items-center justify-center text-white font-bold text-2xl font-display shadow-lg overflow-hidden relative group cursor-pointer"
+                  onClick={() => imgInputRef.current.click()}>
+                  {profileImage
+                    ? <img src={profileImage} alt="profile" className="w-full h-full object-cover" />
+                    : initials
+                  }
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {uploadingImg ? <span className="text-[10px] text-white">...</span> : <Camera size={16} className="text-white" />}
+                  </div>
                 </div>
+                <input ref={imgInputRef} type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
                 <div className="mb-1">
                   <h1 className="font-display text-2xl font-bold text-[#2C1A0E]">{user?.name || 'User'}</h1>
                   <p className="text-sm text-[#7B5C3A]">{user?.email}</p>
+                  {isArtist && user?.businessName && (
+                    <p className="text-xs text-[#C0522B] font-semibold mt-0.5">🏪 {user.businessName}</p>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2 mb-1">
+              <div className="flex gap-2 mb-1 flex-wrap">
+                {isArtist && (
+                  <Link to="/dashboard"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#C0522B] text-white text-sm font-semibold hover:bg-[#9A3E1E] transition-all">
+                    <LayoutDashboard size={13} /> Dashboard
+                  </Link>
+                )}
                 <button onClick={() => setEditing(true)}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#C0522B] text-[#C0522B] text-sm font-semibold hover:bg-[#C0522B] hover:text-white transition-all">
                   <Edit3 size={13} /> Edit Profile
                 </button>
-                <button onClick={logout}
+                <button onClick={() => { logout(); navigate('/'); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#E8D5B0] text-[#7B5C3A] text-sm font-semibold hover:border-red-400 hover:text-red-500 transition-all">
                   <LogOut size={13} /> Sign Out
                 </button>
@@ -75,68 +143,172 @@ export default function UserProfile() {
           {/* ── Overview ── */}
           {activeTab === 'Overview' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Stats */}
-              {[
-                { icon: ShoppingBag, label: 'Total Orders', value: '0', color: 'bg-orange-50 text-[#C0522B]' },
-                { icon: Heart, label: 'Wishlist Items', value: '0', color: 'bg-rose-50 text-rose-500' },
-                { icon: Package, label: 'Delivered', value: '0', color: 'bg-green-50 text-green-600' },
-                { icon: MapPin, label: 'Saved Addresses', value: '0', color: 'bg-blue-50 text-blue-500' },
-              ].map(({ icon: Icon, label, value, color }) => (
-                <div key={label} className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-5 flex items-center gap-4 shadow-sm">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-                    <Icon size={20} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold font-display text-[#2C1A0E]">{value}</p>
-                    <p className="text-sm text-[#7B5C3A]">{label}</p>
-                  </div>
-                </div>
-              ))}
-
-              {/* Info Card */}
-              <div className="sm:col-span-2 bg-white rounded-2xl border border-[#E8D5B0]/60 p-6 shadow-sm">
-                <h3 className="font-semibold text-[#2C1A0E] mb-4">Personal Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {isArtist ? (
+                <>
                   {[
-                    { icon: User, label: 'Full Name', value: user?.name || '—' },
-                    { icon: Mail, label: 'Email', value: user?.email || '—' },
-                    { icon: Phone, label: 'Phone', value: user?.phone || '—' },
-                    { icon: MapPin, label: 'Location', value: user?.city ? `${user.city}, ${user.state}` : '—' },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="flex items-center gap-3 p-3 rounded-xl bg-[#FDF6EC]">
-                      <Icon size={16} className="text-[#C0522B]" />
+                    { icon: Package, label: 'Total Products', value: products.length || '—', color: 'bg-orange-50 text-[#C0522B]' },
+                    { icon: Star, label: 'Rating', value: user?.rating || '0', color: 'bg-yellow-50 text-yellow-600' },
+                    { icon: ShoppingBag, label: 'Total Sales', value: user?.totalSales || '0', color: 'bg-green-50 text-green-600' },
+                    { icon: Briefcase, label: 'Category', value: user?.category || '—', color: 'bg-blue-50 text-blue-500' },
+                  ].map(({ icon: Icon, label, value, color }) => (
+                    <div key={label} className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-5 flex items-center gap-4 shadow-sm">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
+                        <Icon size={20} />
+                      </div>
                       <div>
-                        <p className="text-[10px] text-[#7B5C3A] font-semibold uppercase tracking-wide">{label}</p>
-                        <p className="text-sm text-[#2C1A0E] font-medium">{value}</p>
+                        <p className="text-2xl font-bold font-display text-[#2C1A0E]">{value}</p>
+                        <p className="text-sm text-[#7B5C3A]">{label}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="sm:col-span-2 bg-white rounded-2xl border border-[#E8D5B0]/60 p-6 shadow-sm">
+                    <h3 className="font-semibold text-[#2C1A0E] mb-4">Karigar Information</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[
+                        { icon: User, label: 'Full Name', value: user?.name || '—' },
+                        { icon: Mail, label: 'Email', value: user?.email || '—' },
+                        { icon: Phone, label: 'Phone', value: user?.phone || '—' },
+                        { icon: MapPin, label: 'Location', value: user?.address?.city ? `${user.address.city}, ${user.address.state}` : '—' },
+                      ].map(({ icon: Icon, label, value }) => (
+                        <div key={label} className="flex items-center gap-3 p-3 rounded-xl bg-[#FDF6EC]">
+                          <Icon size={16} className="text-[#C0522B]" />
+                          <div>
+                            <p className="text-[10px] text-[#7B5C3A] font-semibold uppercase tracking-wide">{label}</p>
+                            <p className="text-sm text-[#2C1A0E] font-medium">{value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {user?.bio && (
+                      <div className="mt-4 p-4 bg-[#FDF6EC] rounded-xl">
+                        <p className="text-xs text-[#7B5C3A] font-semibold uppercase tracking-wide mb-1">Bio</p>
+                        <p className="text-sm text-[#2C1A0E]">{user.bio}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="sm:col-span-2 flex gap-3">
+                    <Link to="/dashboard/products/add"
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#C0522B] text-white font-bold hover:bg-[#9A3E1E] transition-all shadow-md">
+                      <Plus size={16} /> Add New Product
+                    </Link>
+                    <Link to="/dashboard"
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full border-2 border-[#C0522B] text-[#C0522B] font-bold hover:bg-[#C0522B] hover:text-white transition-all">
+                      <LayoutDashboard size={16} /> Go to Dashboard
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {[
+                    { icon: ShoppingBag, label: 'Total Orders', value: '0', color: 'bg-orange-50 text-[#C0522B]' },
+                    { icon: Heart, label: 'Wishlist Items', value: '0', color: 'bg-rose-50 text-rose-500' },
+                    { icon: Package, label: 'Delivered', value: '0', color: 'bg-green-50 text-green-600' },
+                    { icon: MapPin, label: 'Saved Addresses', value: '0', color: 'bg-blue-50 text-blue-500' },
+                  ].map(({ icon: Icon, label, value, color }) => (
+                    <div key={label} className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-5 flex items-center gap-4 shadow-sm">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
+                        <Icon size={20} />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold font-display text-[#2C1A0E]">{value}</p>
+                        <p className="text-sm text-[#7B5C3A]">{label}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="sm:col-span-2 bg-white rounded-2xl border border-[#E8D5B0]/60 p-6 shadow-sm">
+                    <h3 className="font-semibold text-[#2C1A0E] mb-4">Personal Information</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[
+                        { icon: User, label: 'Full Name', value: user?.name || '—' },
+                        { icon: Mail, label: 'Email', value: user?.email || '—' },
+                        { icon: Phone, label: 'Phone', value: user?.phone || '—' },
+                        { icon: MapPin, label: 'Location', value: user?.city ? `${user.city}, ${user.state}` : '—' },
+                      ].map(({ icon: Icon, label, value }) => (
+                        <div key={label} className="flex items-center gap-3 p-3 rounded-xl bg-[#FDF6EC]">
+                          <Icon size={16} className="text-[#C0522B]" />
+                          <div>
+                            <p className="text-[10px] text-[#7B5C3A] font-semibold uppercase tracking-wide">{label}</p>
+                            <p className="text-sm text-[#2C1A0E] font-medium">{value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── My Products (Artist only) ── */}
+          {activeTab === 'My Products' && isArtist && (
+            <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-[#E8D5B0]/60 flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold text-[#2C1A0E]">My Products ({products.length})</h3>
+                <Link to="/dashboard/products/add"
+                  className="flex items-center gap-1.5 text-sm text-[#C0522B] font-semibold hover:underline">
+                  <Plus size={14} /> Add New
+                </Link>
+              </div>
+              {products.length === 0 ? (
+                <div className="text-center py-16">
+                  <p className="text-5xl mb-4">🎨</p>
+                  <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">No products yet</h3>
+                  <p className="text-[#7B5C3A] mb-6">Start adding your handcrafted products.</p>
+                  <Link to="/dashboard/products/add"
+                    className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
+                    <Plus size={16} /> Add First Product
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
+                  {products.map(product => (
+                    <div key={product._id} className="border border-[#E8D5B0]/60 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                      <div className="aspect-square bg-[#F5ECD8] overflow-hidden">
+                        {product.images?.[0]
+                          ? <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-4xl">🎨</div>
+                        }
+                      </div>
+                      <div className="p-3">
+                        <p className="font-semibold text-[#2C1A0E] text-sm truncate">{product.name}</p>
+                        <p className="text-[#C0522B] font-bold text-sm">₹{product.price?.toLocaleString('en-IN')}</p>
+                        <div className="flex gap-2 mt-2">
+                          <Link to="/dashboard/products/add" state={{ product }}
+                            className="flex-1 text-center py-1.5 rounded-lg border border-[#E8D5B0] text-xs font-semibold text-[#5C3317] hover:border-[#C0522B] transition-colors">
+                            Edit
+                          </Link>
+                          <Link to={`/products/${product._id}`}
+                            className="flex-1 text-center py-1.5 rounded-lg bg-[#C0522B]/10 text-xs font-semibold text-[#C0522B] hover:bg-[#C0522B]/20 transition-colors">
+                            View
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* ── My Orders ── */}
-          {activeTab === 'My Orders' && (
+          {/* ── My Orders (User only) ── */}
+          {activeTab === 'My Orders' && !isArtist && (
             <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-8 text-center shadow-sm">
               <p className="text-5xl mb-4">📦</p>
               <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">No orders yet</h3>
               <p className="text-[#7B5C3A] mb-6">Your orders will appear here once you start shopping.</p>
-              <Link to="/products"
-                className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
+              <Link to="/products" className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
                 Start Shopping
               </Link>
             </div>
           )}
 
-          {/* ── Wishlist ── */}
-          {activeTab === 'Wishlist' && (
+          {/* ── Wishlist (User only) ── */}
+          {activeTab === 'Wishlist' && !isArtist && (
             <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-8 text-center shadow-sm">
               <p className="text-5xl mb-4">🤍</p>
               <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">Your wishlist is empty</h3>
               <p className="text-[#7B5C3A] mb-6">Save items you love and come back to them anytime.</p>
-              <Link to="/products"
-                className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
+              <Link to="/products" className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
                 Explore Products
               </Link>
             </div>
@@ -159,7 +331,7 @@ export default function UserProfile() {
                   <input type="checkbox" defaultChecked className="accent-[#C0522B] w-4 h-4 cursor-pointer" />
                 </div>
               ))}
-              <button onClick={logout}
+              <button onClick={() => { logout(); navigate('/'); }}
                 className="w-full mt-2 py-3 rounded-xl border-2 border-red-200 text-red-500 font-semibold text-sm hover:bg-red-50 transition-all">
                 Delete Account
               </button>
@@ -182,10 +354,11 @@ export default function UserProfile() {
             <div className="space-y-3">
               {[
                 { key: 'name', label: 'Full Name', type: 'text', placeholder: 'Your name' },
-                { key: 'email', label: 'Email', type: 'email', placeholder: 'your@email.com' },
                 { key: 'phone', label: 'Phone', type: 'tel', placeholder: '98765 43210' },
-                { key: 'city', label: 'City', type: 'text', placeholder: 'Your city' },
-                { key: 'state', label: 'State', type: 'text', placeholder: 'Your state' },
+                ...(isArtist ? [{ key: 'bio', label: 'Bio', type: 'text', placeholder: 'Describe your craft...' }] : [
+                  { key: 'city', label: 'City', type: 'text', placeholder: 'Your city' },
+                  { key: 'state', label: 'State', type: 'text', placeholder: 'Your state' },
+                ]),
               ].map(({ key, label, type, placeholder }) => (
                 <div key={key}>
                   <label className="block text-xs font-semibold text-[#2C1A0E] mb-1">{label}</label>
@@ -200,7 +373,7 @@ export default function UserProfile() {
                 className="flex-1 py-2.5 rounded-xl border border-[#E8D5B0] text-[#7B5C3A] text-sm font-semibold hover:border-[#C0522B] transition-all">
                 Cancel
               </button>
-              <button onClick={() => setEditing(false)}
+              <button onClick={handleSave}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#C0522B] text-white text-sm font-semibold hover:bg-[#9A3E1E] transition-all">
                 <Save size={14} /> Save Changes
               </button>

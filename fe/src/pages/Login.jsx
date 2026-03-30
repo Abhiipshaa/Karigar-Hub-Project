@@ -22,7 +22,7 @@ export default function Login() {
     try {
       const data = await login(form);
       saveUser(data);
-      navigate('/');
+      navigate(data.role === 'artist' ? '/dashboard' : '/');
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

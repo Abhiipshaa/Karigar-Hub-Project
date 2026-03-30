@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 const navLinks = [
   { label: 'Shop', to: '/products' },
   { label: 'Karigars', to: '/artisans' },
-  { label: 'States', to: '/products' },
+  { label: 'States', to: '/states' },
   { label: 'Festivals', to: '/products' },
 ];
 
@@ -103,23 +103,36 @@ export default function Navbar({ cartCount = 0 }) {
                           <p className="text-xs text-[#7B5C3A] truncate">{user.email}</p>
                         </div>
                         <div className="py-1">
-                          <Link to="/profile" onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
-                            <User size={14} /> My Profile
-                          </Link>
-                          <Link to="/orders" onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
-                            <Package size={14} /> My Orders
-                          </Link>
-                          <Link to="/wishlist" onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
-                            <Heart size={14} /> Wishlist
-                          </Link>
-                          {user.role === 'artisan' && (
-                            <Link to="/dashboard" onClick={() => setProfileOpen(false)}
-                              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
-                              <LayoutDashboard size={14} /> Dashboard
-                            </Link>
+                          {user.role === 'artist' ? (
+                            <>
+                              <Link to="/dashboard" onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
+                                <LayoutDashboard size={14} /> My Dashboard
+                              </Link>
+                              <Link to="/dashboard/products" onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
+                                <Package size={14} /> My Products
+                              </Link>
+                              <Link to="/dashboard/products/add" onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
+                                <ShoppingBag size={14} /> Add Product
+                              </Link>
+                            </>
+                          ) : (
+                            <>
+                              <Link to="/profile" onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
+                                <User size={14} /> My Profile
+                              </Link>
+                              <Link to="/orders" onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
+                                <Package size={14} /> My Orders
+                              </Link>
+                              <Link to="/wishlist" onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#2C1A0E] hover:bg-[#FDF6EC] hover:text-[#C0522B] transition-colors">
+                                <Heart size={14} /> Wishlist
+                              </Link>
+                            </>
                           )}
                         </div>
                         <div className="border-t border-[#E8D5B0]/60 py-1">

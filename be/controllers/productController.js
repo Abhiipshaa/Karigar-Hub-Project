@@ -2,10 +2,11 @@ const Product = require("../models/Product");
 
 const getProducts = async (req, res) => {
     try {
-        const { category, search } = req.query;
+        const { category, search, artist } = req.query;
         const filter = {};
         if (category) filter.category = category;
         if (search) filter.name = { $regex: search, $options: "i" };
+        if (artist) filter.artist = artist;
         const products = await Product.find(filter).populate("artist", "name businessName");
         res.json(products);
     } catch (err) {

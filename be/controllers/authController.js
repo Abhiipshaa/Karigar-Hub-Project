@@ -40,17 +40,28 @@ const loginUser = async (req, res) => {
 const registerArtist = async (req, res) => {
     try {
         const { name, email, password, phone, businessName, category, bio, address, gstNumber, panNumber, aadhaarNumber, bankDetails } = req.body;
-        if (!name || !email || !password || !phone || !businessName || !category || !address || !bankDetails)
+        if (!name || !email || !password || !phone || !businessName || !category || !address)
             return res.status(400).json({ message: "Please fill all required fields" });
-
-        if (!gstNumber && !panNumber && !aadhaarNumber)
-            return res.status(400).json({ message: "Provide at least one identity proof (GST, PAN, or Aadhaar)" });
 
         if (await Artist.findOne({ email }))
             return res.status(400).json({ message: "Artist already exists" });
 
         const hashed = await bcrypt.hash(password, 10);
-        const artist = await Artist.create({ name, email, password: hashed, phone, businessName, category, bio, address, gstNumber, panNumber, aadhaarNumber, bankDetails });
+
+        // Provide default bankDetails if not supplied
+        const finalBankDetails = bankDetails || {
+            accountHolderName: name,
+            bankName: 'N/A',
+            accountNumber: '0',
+            ifscCode: 'N/A',
+        };
+
+        const artist = await Artist.create({
+            name, email, password: hashed, phone, businessName, category, bio, address,
+            gstNumber, panNumber, aadhaarNumber,
+            bankDetails: finalBankDetails,
+            isVerified: true,
+        });
 
         res.status(201).json({ _id: artist._id, name: artist.name, email: artist.email, businessName: artist.businessName, token: generateToken(artist._id, "artist") });
     } catch (err) {

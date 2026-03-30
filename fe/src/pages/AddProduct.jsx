@@ -1,11 +1,11 @@
-// TODO: replace with backend API later
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Upload, X, Check, AlertCircle, Package,
   LayoutDashboard, ShoppingBag, BarChart2, Settings, LogOut, Menu, Plus
 } from 'lucide-react';
+import { uploadProductImages, createProduct } from '../services/api';
 
 // ─── Shared dashboard nav (mirrors Dashboard.jsx sidebar) ────────────────────
 const navItems = [
@@ -41,6 +41,7 @@ export default function AddProduct() {
   const isEdit    = !!editData;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // ── Form state ──────────────────────────────────────────────────────────────
@@ -90,12 +91,33 @@ export default function AddProduct() {
   };
 
   // ── Submit ───────────────────────────────────────────────────────────────────
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!validate()) return;
-    // TODO: replace with backend API later — POST /api/karigar/products
-    setSaved(true);
-    setTimeout(() => navigate('/dashboard/products'), 1500);
+    try {
+      setUploading(true);
+      const fileObjects = images.filter(f => f instanceof File);
+      const existingUrls = previews.filter(p => typeof p === 'string' && p.startsWith('http'));
+      let cloudinaryUrls = existingUrls;
+      if (fileObjects.length > 0) {
+        const { urls } = await uploadProductImages(fileObjects);
+        cloudinaryUrls = [...existingUrls, ...urls];
+      }
+      await createProduct({
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        images: cloudinaryUrls,
+      });
+      setSaved(true);
+      setTimeout(() => navigate('/dashboard/products'), 1500);
+    } catch (err) {
+      setErrors(prev => ({ ...prev, submit: err.message }));
+    } finally {
+      setUploading(false);
+    }
   };
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -169,6 +191,11 @@ export default function AddProduct() {
             {saved && (
               <div className="flex items-center gap-3 bg-[#1E4D2B]/10 border border-[#1E4D2B]/30 rounded-2xl p-4 text-[#1E4D2B] text-sm font-semibold">
                 <Check size={18} /> Product {isEdit ? 'updated' : 'published'} successfully! Redirecting...
+              </div>
+            )}
+            {errors.submit && (
+              <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl p-4 text-red-600 text-sm font-semibold">
+                <AlertCircle size={18} /> {errors.submit}
               </div>
             )}
 
@@ -309,9 +336,9 @@ export default function AddProduct() {
 
             {/* ── Actions ── */}
             <div className="flex gap-3 pb-8">
-              <button type="submit"
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#C0522B] text-white font-bold hover:bg-[#9A3E1E] transition-colors shadow-md">
-                <Check size={16} /> {isEdit ? 'Save Changes' : 'Publish Product'}
+              <button type="submit" disabled={uploading}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#C0522B] text-white font-bold hover:bg-[#9A3E1E] transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed">
+                <Check size={16} /> {uploading ? 'Uploading...' : isEdit ? 'Save Changes' : 'Publish Product'}
               </button>
               <Link to="/dashboard/products"
                 className="flex-1 flex items-center justify-center py-3.5 rounded-full border border-[#E8D5B0] text-[#5C3317] font-semibold hover:bg-[#F5ECD8] transition-colors text-center">

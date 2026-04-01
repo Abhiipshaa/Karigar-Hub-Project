@@ -87,7 +87,7 @@ export default function AdminActivity() {
           <div className="relative">
             <div className="absolute left-5 top-0 bottom-0 w-px"
               style={{ background: 'linear-gradient(180deg, rgba(192,82,43,0.25) 0%, rgba(232,213,176,0.15) 100%)' }} />
-            <div className="space-y-4">
+            <div className="space-y-5">
               {activities.map((act, i) => {
                 const cfg = typeConfig[act.type] || typeConfig.user;
                 return (

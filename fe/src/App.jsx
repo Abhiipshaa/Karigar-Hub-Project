@@ -32,7 +32,7 @@ function AppLayout() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!hideLayout && <Navbar cartCount={3} />}
+      {!hideLayout && <Navbar />}
       <main className="flex-1">
         <AnimatePresence mode="wait">
           <motion.div key={location.pathname}

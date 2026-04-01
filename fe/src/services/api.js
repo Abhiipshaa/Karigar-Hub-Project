@@ -1,16 +1,27 @@
-const BASE = 'http://localhost:5001/api';
+const BASE = import.meta.env.PROD
+  ? 'https://karigar-hub-be.onrender.com/api'
+  : 'http://localhost:5001/api';
 
 const getToken = () => localStorage.getItem('kh_token');
 
 const req = async (path, options = {}) => {
   const token = getToken();
+  const { headers: extraHeaders, ...restOptions } = options;
   const res = await fetch(`${BASE}${path}`, {
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extraHeaders,
     },
-    ...options,
   });
+
+  // Guard: if response is not JSON (e.g. HTML 404/500 page), give a clear error
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Server error (${res.status}): endpoint not found or server is down`);
+  }
+
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Request failed');
   return data;
@@ -30,6 +41,10 @@ const upload = async (path, formData) => {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Server error (${res.status}): endpoint not found or server is down`);
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Upload failed');
   return data;
@@ -83,3 +98,7 @@ export const placeOrder   = (body)       => req('/orders',     { method: 'POST',
 export const getMyOrders  = ()           => req('/orders/my');
 export const getOrder     = (id)         => req(`/orders/${id}`);
 export const updateStatus = (id, status) => req(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+
+// ── Payment ───────────────────────────────────────────────────────────────────
+export const createPaymentOrder = (amount) => req('/payment/create-order', { method: 'POST', body: JSON.stringify({ amount }) });
+export const verifyPayment      = (body)   => req('/payment/verify',        { method: 'POST', body: JSON.stringify(body) });

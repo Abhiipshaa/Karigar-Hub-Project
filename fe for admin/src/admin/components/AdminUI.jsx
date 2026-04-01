@@ -31,38 +31,29 @@ export function StatCard({ title, value, icon: Icon, gradient, prefix = '', suff
 
   return (
     <motion.div
-      whileHover={{ y: -4, boxShadow: '0 20px 48px rgba(44,26,14,0.12)' }}
+      whileHover={{ y: -5, boxShadow: '0 20px 48px rgba(15,23,42,0.12)' }}
       transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-      className="relative overflow-hidden rounded-2xl p-6 cursor-default select-none bg-white"
+      className="relative overflow-hidden rounded-2xl cursor-default select-none bg-white"
       style={{
-        border: '1px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(44,26,14,0.06)',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 12px rgba(15,23,42,0.06)',
+        minHeight: 148,
       }}
     >
-      <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ background: gradient }} />
-      <div className="absolute inset-0 opacity-[0.025] rounded-2xl" style={{ background: gradient }} />
+      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: gradient }} />
+      <div className="absolute inset-0 opacity-[0.03] rounded-2xl" style={{ background: gradient }} />
+      <div className="absolute -bottom-8 -right-8 w-32 h-32 rounded-full opacity-[0.07]" style={{ background: gradient }} />
 
-      <div className="relative">
-        <div className="flex items-start justify-between mb-5">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: gradient, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
-            <Icon size={20} color="white" strokeWidth={1.8} />
-          </div>
-          {growth != null && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-              style={{ background: 'rgba(34,197,94,0.08)', color: '#16A34A' }}>
-              <TrendingUp size={9} />
-              +{growth}%
-            </span>
-          )}
+      <div className="relative p-6 flex flex-col justify-between" style={{ minHeight: 148 }}>
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+          style={{ background: gradient, boxShadow: '0 6px 20px rgba(0,0,0,0.15)' }}>
+          <Icon size={22} color="white" strokeWidth={1.8} />
         </div>
-
-        <p className="text-2xl font-bold text-[#1A0A02] leading-none mb-1.5 tracking-tight">{display}</p>
-        <p className="text-sm" style={{ color: '#9B7A52' }}>{title}</p>
+        <div>
+          <p className="text-3xl font-extrabold text-slate-800 leading-none tracking-tight mb-1.5">{display}</p>
+          <p className="text-sm font-semibold text-slate-400">{title}</p>
+        </div>
       </div>
-
-      <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-[0.04]"
-        style={{ background: gradient }} />
     </motion.div>
   );
 }
@@ -177,10 +168,10 @@ export function DeleteModal({ open, onClose, onConfirm, label = 'this item' }) {
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 export function SkeletonRow({ cols = 5 }) {
   return (
-    <tr className="animate-pulse" style={{ borderBottom: '1px solid rgba(232,213,176,0.25)' }}>
+    <tr className="animate-pulse" style={{ borderBottom: '1px solid #F1F5F9' }}>
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-5 py-4">
-          <div className="h-3.5 rounded-full" style={{ width: `${48 + (i * 19) % 38}%`, background: 'rgba(232,213,176,0.6)' }} />
+          <div className="h-3.5 rounded-full bg-slate-100" style={{ width: `${48 + (i * 19) % 38}%` }} />
         </td>
       ))}
     </tr>
@@ -193,15 +184,11 @@ export function EmptyState({ icon = '🏺', message = 'No data found', sub = '' 
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
       className="flex flex-col items-center justify-center py-20 text-center px-4">
       <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mb-5"
-        style={{
-          background: 'linear-gradient(135deg, #FBF5EC, #F0E4CC)',
-          boxShadow: '0 8px 32px rgba(192,82,43,0.1), inset 0 1px 0 rgba(255,255,255,0.8)',
-          border: '1px solid rgba(232,213,176,0.5)',
-        }}>
+        style={{ background: '#EEF2FF', border: '1px solid #C7D2FE' }}>
         {icon}
       </div>
-      <p className="font-display font-bold text-[#1A0A02] text-lg mb-1.5">{message}</p>
-      {sub && <p className="text-sm font-medium" style={{ color: '#9B7A52' }}>{sub}</p>}
+      <p className="font-bold text-slate-800 text-lg mb-1.5">{message}</p>
+      {sub && <p className="text-sm font-semibold text-slate-400">{sub}</p>}
     </motion.div>
   );
 }
@@ -214,10 +201,10 @@ export function PageWrapper({ children }) {
 // ── Page Header ───────────────────────────────────────────────────────────────
 export function PageHeader({ title, sub, children }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10">
       <div>
-        <h2 className="text-xl font-semibold text-[#1A0A02] tracking-tight">{title}</h2>
-        {sub && <p className="text-sm mt-1" style={{ color: '#9B7A52' }}>{sub}</p>}
+        <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">{title}</h2>
+        {sub && <p className="text-sm mt-1.5 font-semibold text-indigo-400">{sub}</p>}
       </div>
       {children && <div className="flex items-center gap-2.5 flex-shrink-0">{children}</div>}
     </div>
@@ -228,16 +215,16 @@ export function PageHeader({ title, sub, children }) {
 import { Search } from 'lucide-react';
 export function SearchInput({ value, onChange, placeholder = 'Search...' }) {
   return (
-    <div className="relative w-full sm:w-60">
+    <div className="relative w-full sm:w-64">
+      <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
       <input
         value={value} onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-4 pr-8 py-2 rounded-xl text-sm focus:outline-none transition-all"
-        style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#2C1A0E' }}
-        onFocus={e => { e.target.style.background = 'white'; e.target.style.borderColor = '#C0522B'; e.target.style.boxShadow = '0 0 0 3px rgba(192,82,43,0.08)'; }}
-        onBlur={e => { e.target.style.background = 'rgba(0,0,0,0.04)'; e.target.style.borderColor = 'rgba(0,0,0,0.07)'; e.target.style.boxShadow = 'none'; }}
+        className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium focus:outline-none transition-all text-slate-700"
+        style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0' }}
+        onFocus={e => { e.target.style.background = 'white'; e.target.style.borderColor = '#6366f1'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+        onBlur={e => { e.target.style.background = '#F8FAFC'; e.target.style.borderColor = '#E2E8F0'; e.target.style.boxShadow = 'none'; }}
       />
-      <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#B8956A' }} />
     </div>
   );
 }
@@ -247,8 +234,8 @@ export function SectionCard({ children, className = '' }) {
   return (
     <div className={`rounded-2xl overflow-hidden bg-white ${className}`}
       style={{
-        border: '1px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(44,26,14,0.05)',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 12px rgba(15,23,42,0.06)',
       }}>
       {children}
     </div>
@@ -260,15 +247,16 @@ import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 export function SectionHeader({ title, sub, to, children }) {
   return (
-    <div className="px-6 py-4 flex items-center justify-between"
-      style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+    <div className="px-6 py-5 flex items-center justify-between"
+      style={{ borderBottom: '1px solid #F1F5F9' }}>
       <div>
-        <h3 className="text-sm font-semibold text-[#1A0A02]">{title}</h3>
-        {sub && <p className="text-xs mt-0.5" style={{ color: '#9B7A52' }}>{sub}</p>}
+        <h3 className="text-base font-bold text-slate-800">{title}</h3>
+        {sub && <p className="text-xs mt-0.5 font-semibold text-indigo-400">{sub}</p>}
       </div>
       {to && (
-        <Link to={to} className="flex items-center gap-1 text-xs font-bold group transition-all"
-          style={{ color: '#C0522B' }}>
+        <Link to={to} className="flex items-center gap-1 text-xs font-bold group transition-all text-indigo-500"
+          onMouseEnter={e => e.currentTarget.style.color = '#4338CA'}
+          onMouseLeave={e => e.currentTarget.style.color = '#6366f1'}>
           View all
           <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
         </Link>
@@ -291,8 +279,8 @@ export function TableCard({ children }) {
 
 export function Th({ children, className = '' }) {
   return (
-    <th className={`px-6 py-3 text-left text-[11px] font-medium uppercase tracking-wider whitespace-nowrap ${className}`}
-      style={{ background: '#FAFAF9', color: '#9B7A52', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+    <th className={`px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider whitespace-nowrap text-slate-400 ${className}`}
+      style={{ background: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
       {children}
     </th>
   );
@@ -301,41 +289,40 @@ export function Th({ children, className = '' }) {
 export function Tr({ children, onClick }) {
   return (
     <motion.tr
-      whileHover={{ backgroundColor: '#FDFAF7' }}
+      whileHover={{ backgroundColor: '#F8FAFF' }}
       transition={{ duration: 0.12 }}
       onClick={onClick}
       className="cursor-default"
-      style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+      style={{ borderBottom: '1px solid #F8FAFC' }}>
       {children}
     </motion.tr>
   );
 }
 
 export function Td({ children, className = '' }) {
-  return <td className={`px-6 py-3.5 text-sm text-[#2C1A0E] ${className}`}>{children}</td>;
+  return <td className={`px-6 py-4 text-sm text-slate-700 ${className}`}>{children}</td>;
 }
 
 // ── Filter Tabs ───────────────────────────────────────────────────────────────
 export function FilterTabs({ tabs, active, onChange }) {
   return (
-    <div className="inline-flex gap-0.5 p-1 rounded-xl"
-      style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)' }}>
+    <div className="inline-flex gap-1 p-1 rounded-xl bg-slate-100" style={{ border: '1px solid #E2E8F0' }}>
       {tabs.map(tab => (
         <button key={tab.value} onClick={() => onChange(tab.value)}
-          className="relative px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap"
-          style={{ color: active === tab.value ? '#1A0A02' : '#9B7A52' }}>
+          className="relative px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap"
+          style={{ color: active === tab.value ? '#4338CA' : '#64748B' }}>
           {active === tab.value && (
             <motion.div layoutId="filterPill" className="absolute inset-0 rounded-lg bg-white"
-              style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+              style={{ boxShadow: '0 1px 4px rgba(15,23,42,0.08)', border: '1px solid #C7D2FE' }}
             />
           )}
           <span className="relative z-10 flex items-center gap-1.5">
             {tab.label}
             {tab.count != null && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
                 style={{
-                  background: active === tab.value ? '#C0522B' : 'rgba(0,0,0,0.07)',
-                  color: active === tab.value ? 'white' : '#9B7A52',
+                  background: active === tab.value ? '#EEF2FF' : '#E2E8F0',
+                  color: active === tab.value ? '#6366f1' : '#94A3B8',
                 }}>
                 {tab.count}
               </span>

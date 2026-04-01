@@ -46,7 +46,7 @@ export default function AdminOrders() {
       <PageHeader title="Orders" sub={`${orders.length} total orders`} />
 
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        className="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
         {metrics.map((m, i) => (
           <motion.div key={m.key} whileHover={{ y: -2 }}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export default function AdminOrders() {
         </motion.div>
       </motion.div>
 
-      <div className="mb-4 overflow-x-auto pb-1">
+      <div className="mb-6 overflow-x-auto pb-1">
         <FilterTabs tabs={tabsWithCount} active={filter} onChange={setFilter} />
       </div>
 

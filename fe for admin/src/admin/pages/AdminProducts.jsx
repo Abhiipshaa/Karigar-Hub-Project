@@ -45,7 +45,7 @@ export default function AdminProducts() {
         <SearchInput value={search} onChange={setSearch} placeholder="Search product or artisan..." />
       </PageHeader>
 
-      <div className="mb-5 overflow-x-auto pb-1">
+      <div className="mb-6 overflow-x-auto pb-1">
         <FilterTabs tabs={catTabs} active={category} onChange={setCategory} />
       </div>
 

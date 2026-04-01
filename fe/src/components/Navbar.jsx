@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Menu, X, Search, User, Heart, LogOut, ChevronDown, Package, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 const navLinks = [
   { label: 'Shop', to: '/products' },
@@ -20,6 +21,7 @@ export default function Navbar({ cartCount = 0 }) {
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
   const { user, logout } = useAuth();
+  const { totalItems } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -77,8 +79,8 @@ export default function Navbar({ cartCount = 0 }) {
             </Link>
             <Link to="/cart" className={`relative p-2 rounded-full hover:bg-[#C0522B]/10 transition-colors ${textColor}`}>
               <ShoppingBag size={18} />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C0522B] text-white text-[10px] rounded-full flex items-center justify-center font-bold">{cartCount}</span>
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C0522B] text-white text-[10px] rounded-full flex items-center justify-center font-bold">{totalItems}</span>
               )}
             </Link>
             {user ? (

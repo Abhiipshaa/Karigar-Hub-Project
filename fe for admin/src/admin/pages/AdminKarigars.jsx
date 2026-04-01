@@ -58,7 +58,7 @@ export default function AdminKarigars() {
         <SearchInput value={search} onChange={setSearch} placeholder="Search karigar or craft..." />
       </PageHeader>
 
-      <div className="mb-4 overflow-x-auto pb-1">
+      <div className="mb-6 overflow-x-auto pb-1">
         <FilterTabs tabs={tabsWithCount} active={filter} onChange={setFilter} />
       </div>
 

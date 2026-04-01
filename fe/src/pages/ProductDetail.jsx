@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Heart, Sparkles, Leaf, ChevronRight, MessageSquare, MapPin, Award } from 'lucide-react';
 import { getProduct, getProducts } from '../services/api';
+import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 import { StarRating, Badge } from '../components/UI';
 
@@ -14,6 +15,7 @@ export default function ProductDetail() {
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [customNote, setCustomNote] = useState('');
+  const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
@@ -30,7 +32,11 @@ export default function ProductDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleAdd = () => { setAdded(true); setTimeout(() => setAdded(false), 2000); };
+  const handleAdd = () => {
+    addToCart({ ...product, quantity: qty });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-[#FDF6EC] pt-24 flex items-center justify-center">

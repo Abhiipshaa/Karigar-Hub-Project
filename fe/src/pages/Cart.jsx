@@ -1,23 +1,10 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, ShoppingBag, ArrowRight, Leaf, MapPin } from 'lucide-react';
-import { products } from '../data/sampleData';
-
-const initialCart = [
-  { ...products[0], quantity: 1 },
-  { ...products[2], quantity: 2 },
-  { ...products[6], quantity: 1 },
-];
+import { useCart } from '../context/CartContext';
 
 export default function Cart() {
-  const [cart, setCart] = useState(initialCart);
-
-  const updateQty = (id, delta) =>
-    setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item));
-  const remove = (id) => setCart(prev => prev.filter(item => item.id !== id));
-
-  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const { cart, removeFromCart, updateQty, totalItems, subtotal } = useCart();
   const shipping = subtotal > 999 ? 0 : 99;
   const total = subtotal + shipping;
 
@@ -27,7 +14,7 @@ export default function Cart() {
         <div className="flex items-center gap-3 mb-8">
           <ShoppingBag size={24} className="text-[#C0522B]" />
           <h1 className="font-display text-3xl font-bold text-[#2C1A0E]">आपकी Cart</h1>
-          <span className="bg-[#C0522B] text-white text-xs font-bold px-2.5 py-1 rounded-full">{cart.length}</span>
+          <span className="bg-[#C0522B] text-white text-xs font-bold px-2.5 py-1 rounded-full">{totalItems}</span>
         </div>
 
         {cart.length === 0 ? (
@@ -43,40 +30,49 @@ export default function Cart() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {cart.map((item, i) => (
-                <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-4 flex gap-4">
-                  <Link to={`/products/${item.id}`}>
-                    <img src={item.image} alt={item.name} className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0" />
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <MapPin size={10} className="text-[#C0522B]" />
-                          <p className="text-[10px] text-[#C0522B] font-bold uppercase tracking-wide">{item.state}</p>
-                          <span className="text-[#E8D5B0] mx-1">·</span>
-                          <p className="text-[10px] text-[#7B5C3A]">{item.artisan}</p>
+              <AnimatePresence>
+                {cart.map((item, i) => (
+                  <motion.div key={item._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }} transition={{ delay: i * 0.05 }}
+                    className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-4 flex gap-4">
+                    <Link to={`/products/${item._id}`}>
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-[#F5ECD8] shrink-0">
+                        {item.images?.[0]
+                          ? <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-3xl">🎨</div>
+                        }
+                      </div>
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <MapPin size={10} className="text-[#C0522B]" />
+                            <p className="text-[10px] text-[#C0522B] font-bold uppercase tracking-wide">
+                              {item.artist?.name || '—'}
+                            </p>
+                          </div>
+                          <Link to={`/products/${item._id}`}>
+                            <h3 className="font-display font-bold text-[#2C1A0E] text-sm leading-snug hover:text-[#C0522B] transition-colors line-clamp-2">{item.name}</h3>
+                          </Link>
+                          <p className="text-xs text-[#7B5C3A] mt-0.5">{item.category}</p>
                         </div>
-                        <Link to={`/products/${item.id}`}>
-                          <h3 className="font-display font-bold text-[#2C1A0E] text-sm leading-snug hover:text-[#C0522B] transition-colors line-clamp-2">{item.name}</h3>
-                        </Link>
+                        <button onClick={() => removeFromCart(item._id)} className="text-[#7B5C3A] hover:text-red-500 transition-colors shrink-0 p-1">
+                          <Trash2 size={15} />
+                        </button>
                       </div>
-                      <button onClick={() => remove(item.id)} className="text-[#7B5C3A] hover:text-red-500 transition-colors shrink-0 p-1">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center border border-[#E8D5B0] rounded-full overflow-hidden">
-                        <button onClick={() => updateQty(item.id, -1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">−</button>
-                        <span className="px-3 py-1.5 text-sm font-bold text-[#2C1A0E]">{item.quantity}</span>
-                        <button onClick={() => updateQty(item.id, 1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">+</button>
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center border border-[#E8D5B0] rounded-full overflow-hidden">
+                          <button onClick={() => updateQty(item._id, -1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">−</button>
+                          <span className="px-3 py-1.5 text-sm font-bold text-[#2C1A0E]">{item.quantity}</span>
+                          <button onClick={() => updateQty(item._id, 1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">+</button>
+                        </div>
+                        <span className="font-display font-bold text-[#2C1A0E]">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                       </div>
-                      <span className="font-display font-bold text-[#2C1A0E]">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
               <div className="flex items-start gap-3 bg-[#1E4D2B]/8 border border-[#1E4D2B]/20 rounded-2xl p-4">
                 <Leaf size={18} className="text-[#1E4D2B] mt-0.5 shrink-0" />
@@ -92,7 +88,7 @@ export default function Cart() {
                 <h2 className="font-display text-xl font-bold text-[#2C1A0E] mb-5">Order Summary</h2>
                 <div className="space-y-3 mb-5">
                   <div className="flex justify-between text-sm text-[#5C3317]">
-                    <span>Subtotal ({cart.reduce((s, i) => s + i.quantity, 0)} items)</span>
+                    <span>Subtotal ({totalItems} items)</span>
                     <span className="font-bold">₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-sm text-[#5C3317]">
@@ -118,7 +114,6 @@ export default function Cart() {
                   className="flex items-center justify-center w-full py-3 border border-[#E8D5B0] text-[#5C3317] rounded-xl text-sm font-semibold hover:bg-[#F5ECD8] transition-colors">
                   Shopping जारी रखें
                 </Link>
-
                 <div className="mt-4 flex items-center justify-center gap-4 text-xs text-[#7B5C3A]">
                   <span>🔒 Secure Checkout</span>
                   <span>🇮🇳 Made in India</span>

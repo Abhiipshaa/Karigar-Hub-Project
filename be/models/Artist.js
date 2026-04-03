@@ -94,7 +94,11 @@ const artistSchema = new mongoose.Schema({
     totalSales: {
         type: Number,
         default: 0
-    }
+    },
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 
 }, {
     timestamps: true

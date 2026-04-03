@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, ShoppingBag, Share2, Calendar, Award } from 'lucide-react';
-import { getArtisan, getProducts } from '../services/api';
+import { MapPin, ShoppingBag, Share2, Calendar, Award, UserPlus, UserCheck } from 'lucide-react';
+import { getArtisan, getProducts, toggleFollow } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 import { StarRating } from '../components/UI';
 
 export default function ArtisanProfile() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [artisan, setArtisan] = useState(null);
   const [artisanProducts, setArtisanProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [following, setFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [followError, setFollowError] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -20,10 +26,31 @@ export default function ArtisanProfile() {
       .then(([a, p]) => {
         setArtisan(a);
         setArtisanProducts(Array.isArray(p) ? p : []);
+        const count = a.followers?.length || 0;
+        setFollowersCount(count);
+        if (user) {
+          const uid = (user._id || user.id || '').toString();
+          setFollowing(a.followers?.some(f => (f._id || f).toString() === uid) || false);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
+
+  const handleFollow = async () => {
+    if (!user) return;
+    setFollowLoading(true);
+    setFollowError('');
+    try {
+      const res = await toggleFollow(id);
+      setFollowing(res.following);
+      setFollowersCount(res.followersCount);
+    } catch (err) {
+      setFollowError(err.message || 'Failed to follow');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-[#FDF6EC] pt-20 flex items-center justify-center">
@@ -79,14 +106,41 @@ export default function ArtisanProfile() {
                       {artisan.isVerified && <span className="flex items-center gap-1 text-green-600"><Award size={13} /> Verified</span>}
                     </div>
                   </div>
-                  <div className="flex gap-3">
-                    <button className="w-10 h-10 rounded-full bg-[#F5ECD8] flex items-center justify-center text-[#5C3317] hover:bg-[#C0522B] hover:text-white transition-colors">
-                      <Share2 size={15} />
-                    </button>
-                    <Link to="/products"
-                      className="flex items-center gap-2 bg-[#C0522B] text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#9A3E1E] transition-all">
-                      <ShoppingBag size={14} /> Shop Now
-                    </Link>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-3">
+                      <button className="w-10 h-10 rounded-full bg-[#F5ECD8] flex items-center justify-center text-[#5C3317] hover:bg-[#C0522B] hover:text-white transition-colors">
+                        <Share2 size={15} />
+                      </button>
+                      {user ? (
+                        <button
+                          onClick={handleFollow}
+                          disabled={followLoading}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all disabled:opacity-60 ${
+                            following
+                              ? 'bg-[#1E4D2B]/10 text-[#1E4D2B] border-2 border-[#1E4D2B] hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+                              : 'bg-[#1E4D2B] text-white hover:bg-[#163a20]'
+                          }`}>
+                          {followLoading
+                            ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            : following
+                              ? <><UserCheck size={14} /> <span>Following</span></>
+                              : <><UserPlus size={14} /> <span>Follow</span></>
+                          }
+                        </button>
+                      ) : (
+                        <Link to="/login"
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-[#1E4D2B] text-white hover:bg-[#163a20] transition-all">
+                          <UserPlus size={14} /> Follow
+                        </Link>
+                      )}
+                      <Link to="/products"
+                        className="flex items-center gap-2 bg-[#C0522B] text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#9A3E1E] transition-all">
+                        <ShoppingBag size={14} /> Shop Now
+                      </Link>
+                    </div>
+                    {followError && (
+                      <p className="text-xs text-red-500 font-semibold">{followError}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -95,10 +149,10 @@ export default function ArtisanProfile() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#E8D5B0]/60">
               {[
-                { label: 'Rating', value: artisan.rating || 0, icon: '⭐' },
-                { label: 'Products', value: artisanProducts.length, icon: '🎨' },
-                { label: 'Total Sales', value: artisan.totalSales || 0, icon: '🛍️' },
-                { label: 'Status', value: artisan.isVerified ? 'Verified' : 'Pending', icon: '✅' },
+                { label: 'Rating',    value: artisan.rating || 0,       icon: '⭐' },
+                { label: 'Products',  value: artisanProducts.length,     icon: '🎨' },
+                { label: 'Followers', value: followersCount,             icon: '👥' },
+                { label: 'Status',    value: artisan.isVerified ? 'Verified' : 'Pending', icon: '✅' },
               ].map((stat, i) => (
                 <div key={i} className="text-center">
                   <p className="text-xl mb-0.5">{stat.icon}</p>

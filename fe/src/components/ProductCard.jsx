@@ -91,9 +91,14 @@ export default function ProductCard({ product }) {
         }
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-          {product.customizable && (
+          {product.isBestSeller && (
+            <span className="flex items-center gap-1 bg-[#C9920A] text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
+              🏆 Best Seller
+            </span>
+          )}
+          {(product.isCustomizable || product.customizable) && (
             <span className="flex items-center gap-1 bg-[#1E4D2B] text-white text-[10px] font-semibold px-2 py-1 rounded-full">
-              <Sparkles size={9} /> Custom
+              <Sparkles size={9} /> Customize
             </span>
           )}
           {product.originalPrice && (

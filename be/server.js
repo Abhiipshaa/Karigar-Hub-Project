@@ -16,6 +16,11 @@ app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/artists", require("./routes/artistRoutes"));
 app.use("/api/admin",   require("./routes/adminRoutes"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
+app.use("/api/chat",      require("./routes/chatRoutes"));
+app.use("/api/workshops", require("./routes/workshopRoutes"));
+app.use("/api/invoice",   require("./routes/invoiceRoutes"));
+app.use("/api/cart",            require("./routes/cartRoutes"));
+app.use("/api/customization",   require("./routes/customizationRoutes"));
 
 // Start server immediately
 const PORT = process.env.PORT || 5000;

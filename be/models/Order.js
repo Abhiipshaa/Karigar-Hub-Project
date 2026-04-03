@@ -15,6 +15,15 @@ const orderSchema = new mongoose.Schema({
         quantity: {
             type: Number,
             required: true
+        },
+        customizationNote: {
+            type: String,
+            default: ""
+        },
+        customizationStatus: {
+            type: String,
+            enum: ["none", "pending", "accepted", "rejected"],
+            default: "none"
         }
     }],
 

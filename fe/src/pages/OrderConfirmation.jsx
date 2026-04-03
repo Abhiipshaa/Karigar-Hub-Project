@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, MapPin, CreditCard, Package, ArrowRight, ClipboardList } from 'lucide-react';
+import InvoiceButton from '../components/InvoiceButton';
 
 // ─── Status badge helper ──────────────────────────────────────────────────────
 function StatusBadge({ label, color }) {
@@ -177,6 +178,9 @@ export default function OrderConfirmation() {
             className="flex-1 flex items-center justify-center gap-2 py-3.5 border border-[#E8D5B0] text-[#5C3317] rounded-full font-semibold hover:bg-[#F5ECD8] transition-all">
             <ClipboardList size={16} /> My Orders देखें
           </Link>
+          <div className="flex-1">
+            <InvoiceButton orderId={orderId} fullWidth />
+          </div>
         </motion.div>
 
         <p className="text-center text-xs text-[#7B5C3A] mt-6">

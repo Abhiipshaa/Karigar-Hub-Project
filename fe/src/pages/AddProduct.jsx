@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Upload, X, Check, AlertCircle, Package,
-  LayoutDashboard, ShoppingBag, BarChart2, Settings, LogOut, Menu, Plus
+  LayoutDashboard, ShoppingBag, BarChart2, Settings, LogOut, Menu, Plus, Trash2
 } from 'lucide-react';
 import { uploadProductImages, createProduct } from '../services/api';
 
@@ -57,7 +57,16 @@ export default function AddProduct() {
     handmade:      editData?.handmade      ?? true,
     status:        editData?.status        || 'active',
     tags:          editData?.tags?.join(', ') || '',
+    isCustomizable: editData?.isCustomizable || false,
   });
+
+  const [customOptions, setCustomOptions] = useState(
+    editData?.customizationOptions || []
+  );
+
+  const addCustomOption = () => setCustomOptions(prev => [...prev, { name: '', type: 'text', required: false, options: [], priceAdd: 0 }]);
+  const removeCustomOption = i => setCustomOptions(prev => prev.filter((_, j) => j !== i));
+  const updateCustomOption = (i, key, val) => setCustomOptions(prev => prev.map((o, j) => j === i ? { ...o, [key]: val } : o));
 
   const [images,   setImages]   = useState([]);   // File objects
   const [previews, setPreviews] = useState(editData?.images || []);
@@ -110,6 +119,8 @@ export default function AddProduct() {
         price: Number(form.price),
         stock: Number(form.stock),
         images: cloudinaryUrls,
+        isCustomizable: form.isCustomizable,
+        customizationOptions: form.isCustomizable ? customOptions.filter(o => o.name.trim()) : [],
       });
       setSaved(true);
       setTimeout(() => navigate('/dashboard/products'), 1500);
@@ -316,7 +327,7 @@ export default function AddProduct() {
               <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} />
             </div>
 
-            {/* ── Options ── */}
+            {/* ── Product Options ── */}
             <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-6 space-y-3">
               <h3 className="font-display text-lg font-bold text-[#2C1A0E] mb-2">Product Options</h3>
               {[
@@ -332,6 +343,156 @@ export default function AddProduct() {
                   </div>
                 </label>
               ))}
+            </div>
+
+            {/* ── Customization Options Builder ── */}
+            <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display text-lg font-bold text-[#2C1A0E]">Customization Options</h3>
+                  <p className="text-xs text-[#9B7A5A] mt-0.5">Let buyers personalise this product before adding to cart</p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-sm text-[#7B5C3A] font-semibold">Enable</span>
+                  <button type="button" onClick={() => set('isCustomizable', !form.isCustomizable)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      form.isCustomizable ? 'bg-[#C0522B]' : 'bg-[#E8D5B0]'
+                    }`}>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      form.isCustomizable ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </label>
+              </div>
+
+              {form.isCustomizable && (
+                <div className="space-y-4">
+                  {customOptions.map((opt, i) => (
+                    <div key={i} className="border border-[#E8D5B0] rounded-xl p-4 space-y-3 bg-[#FDF6EC]">
+                      {/* Header row */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#C0522B] uppercase tracking-wide bg-[#C0522B]/10 px-2 py-0.5 rounded-full">
+                          Field {i + 1}
+                        </span>
+                        <button type="button" onClick={() => removeCustomOption(i)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-[#7B5C3A] hover:text-red-500 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {/* Name + Type */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Field Name *</label>
+                          <input className={inputCls} value={opt.name} placeholder="e.g. Color, Size, Engraving"
+                            onChange={e => updateCustomOption(i, 'name', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Input Type *</label>
+                          <select className={inputCls + ' cursor-pointer'} value={opt.type}
+                            onChange={e => updateCustomOption(i, 'type', e.target.value)}>
+                            <option value="text">✏️ Text Input</option>
+                            <option value="number">🔢 Number Input</option>
+                            <option value="dropdown">📋 Dropdown</option>
+                            <option value="radio">🔘 Radio Buttons</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Choices — only for dropdown / radio */}
+                      {(opt.type === 'dropdown' || opt.type === 'radio') && (
+                        <div>
+                          <label className={labelCls}>Choices <span className="text-[#9B7A5A] font-normal">(comma-separated)</span></label>
+                          <input className={inputCls}
+                            value={opt.options?.join(', ') || ''}
+                            placeholder="e.g. Red, Blue, Green"
+                            onChange={e => updateCustomOption(i, 'options', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+                          {/* Chip preview of entered choices */}
+                          {opt.options?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {opt.options.map(o => (
+                                <span key={o} className="text-xs bg-white border border-[#E8D5B0] text-[#5C3317] px-2.5 py-0.5 rounded-full font-semibold">{o}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Extra price */}
+                      <div>
+                        <label className={labelCls}>
+                          Extra Price (₹) <span className="text-[#9B7A5A] font-normal">— added to base price when this field is filled</span>
+                        </label>
+                        <div className="relative w-40">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7B5C3A] font-bold text-sm">₹</span>
+                          <input
+                            type="number" min="0" placeholder="0"
+                            value={opt.priceAdd || ''}
+                            onChange={e => updateCustomOption(i, 'priceAdd', Number(e.target.value) || 0)}
+                            className={inputCls + ' pl-7'}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Required toggle */}
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <div
+                          onClick={() => updateCustomOption(i, 'required', !opt.required)}
+                          className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
+                            opt.required ? 'bg-[#C0522B]' : 'bg-[#E8D5B0]'
+                          }`}>
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                            opt.required ? 'translate-x-4' : 'translate-x-0'
+                          }`} />
+                        </div>
+                        <span className="text-sm text-[#5C3317] font-semibold">Required — buyer must fill this before adding to cart</span>
+                      </label>
+                    </div>
+                  ))}
+
+                  <button type="button" onClick={addCustomOption}
+                    className="flex items-center gap-2 text-sm font-semibold text-[#C0522B] border border-dashed border-[#C0522B]/40 px-4 py-3 rounded-xl hover:bg-[#C0522B]/5 transition-all w-full justify-center">
+                    <Plus size={14} /> Add Another Field
+                  </button>
+
+                  {/* Live buyer preview */}
+                  {customOptions.some(o => o.name.trim()) && (
+                    <div className="border border-[#C0522B]/20 rounded-xl p-4 bg-[#FDF6EC] space-y-3">
+                      <p className="text-xs font-bold text-[#C0522B] uppercase tracking-wide">👁 Buyer Preview</p>
+                      {customOptions.filter(o => o.name.trim()).map((opt, i) => (
+                        <div key={i}>
+                          <p className="text-xs font-bold text-[#7B5C3A] mb-1 uppercase tracking-wide">
+                            {opt.name} {opt.required && <span className="text-[#C0522B]">*</span>}
+                            {opt.priceAdd > 0 && <span className="ml-1 text-[#1E4D2B] normal-case font-semibold">(+₹{opt.priceAdd})</span>}
+                          </p>
+                          {opt.type === 'dropdown' && (
+                            <select disabled className="w-full px-3 py-2 rounded-xl border border-[#E8D5B0] bg-white text-sm text-[#9B7A5A] cursor-not-allowed">
+                              <option>Select {opt.name}</option>
+                              {opt.options?.map(o => <option key={o}>{o}</option>)}
+                            </select>
+                          )}
+                          {opt.type === 'radio' && (
+                            <div className="flex flex-wrap gap-2">
+                              {opt.options?.length
+                                ? opt.options.map(o => (
+                                    <span key={o} className="px-3 py-1.5 rounded-xl border border-[#E8D5B0] bg-white text-sm text-[#5C3317] font-semibold">{o}</span>
+                                  ))
+                                : <span className="text-xs text-[#B09070] italic">No choices added yet</span>
+                              }
+                            </div>
+                          )}
+                          {opt.type === 'text' && (
+                            <div className="w-full px-3 py-2 rounded-xl border border-[#E8D5B0] bg-white text-sm text-[#B09070] italic">Enter {opt.name}</div>
+                          )}
+                          {opt.type === 'number' && (
+                            <div className="w-32 px-3 py-2 rounded-xl border border-[#E8D5B0] bg-white text-sm text-[#B09070] italic">0</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Actions ── */}

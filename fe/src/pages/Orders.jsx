@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ClipboardList, Package, ArrowRight, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import InvoiceButton from '../components/InvoiceButton';
 import { getMyOrders } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -92,7 +93,7 @@ function OrderCard({ order, index }) {
                 const price  = Number(item.price || item.product?.price || 0);
                 const qty    = Number(item.quantity || 1);
                 return (
-                  <div key={item._id || idx} className="flex gap-3 items-center">
+                  <div key={item._id || idx} className="flex gap-3 items-start">
                     {imgSrc
                       ? <img src={imgSrc} alt={item.name || 'Product'} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-[#E8D5B0]" />
                       : <div className="w-10 h-10 rounded-lg bg-[#F5ECD8] shrink-0 border border-[#E8D5B0] flex items-center justify-center">🎨</div>
@@ -100,6 +101,20 @@ function OrderCard({ order, index }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[#2C1A0E] line-clamp-1">{item.name || item.product?.name || 'Product'}</p>
                       <p className="text-xs text-[#7B5C3A]">Qty: {qty}</p>
+                      {item.customizationNote?.trim() && (
+                        <div className="mt-1.5 bg-[#FDF6EC] border border-[#E8D5B0] rounded-lg px-2.5 py-1.5">
+                          <p className="text-[10px] font-bold text-[#7B5C3A] uppercase tracking-wide mb-0.5">✏️ Customization Note</p>
+                          <p className="text-xs text-[#5C3317]">{item.customizationNote}</p>
+                          <span className={`inline-flex items-center mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            item.customizationStatus === 'accepted' ? 'bg-green-100 text-green-700 border-green-200' :
+                            item.customizationStatus === 'rejected' ? 'bg-red-100 text-red-600 border-red-200' :
+                            'bg-yellow-100 text-yellow-700 border-yellow-200'
+                          }`}>
+                            {item.customizationStatus === 'accepted' ? '✓ Accepted' :
+                             item.customizationStatus === 'rejected' ? '✕ Rejected' : '⏳ Pending'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{(price * qty).toLocaleString('en-IN')}</span>
                   </div>
@@ -113,6 +128,9 @@ function OrderCard({ order, index }) {
               <span>{[addr.fullName, addr.addressLine || addr.line1, addr.city, addr.state, addr.pincode].filter(Boolean).join(' · ')}</span>
             </div>
           )}
+          <div className="flex justify-end pt-1">
+            <InvoiceButton orderId={order._id} />
+          </div>
         </motion.div>
       )}
     </motion.div>

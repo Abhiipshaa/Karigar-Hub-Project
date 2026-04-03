@@ -9,6 +9,7 @@ import {
 import { placeOrder, createPaymentOrder, verifyPayment, saveAddress } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import LocationPicker from "../components/LocationPicker";
 
 const RAZORPAY_KEY_ID = 'rzp_test_SXij1zXDGrKPrt';
 
@@ -59,8 +60,13 @@ export default function Checkout() {
     phone:    user?.phone || '',
     email:    user?.email || '',
     line1: '', line2: '', city: '', pincode: '', state: '',
+    lat: null,   // ✅ ADD
+    lng: null    // ✅ ADD
   });
 
+  const [customizationNotes, setCustomizationNotes] = useState({});  // keyed by cart item _id
+
+  const [addressMode, setAddressMode] = useState('manual');
   const [errors,     setErrors]     = useState({});
   const [loading,    setLoading]    = useState(false);
   const [orderError, setOrderError] = useState('');
@@ -127,7 +133,11 @@ export default function Checkout() {
 
               /* 5. Place order in DB */
               const orderPayload = {
-                products: cart.map(i => ({ product: i._id, quantity: i.quantity })),
+                products: cart.map(i => ({
+                  product: i._id,
+                  quantity: i.quantity,
+                  customizationNote: customizationNotes[i._id] || "",
+                })),
                 totalPrice: total,
                 paymentMethod: 'razorpay',
                 shippingAddress: {
@@ -251,6 +261,31 @@ export default function Checkout() {
                 <MapPin size={18} className="text-[#C0522B]" />
                 <h2 className="font-display text-xl font-bold text-[#2C1A0E]">Delivery Address</h2>
               </div>
+              <div className="flex gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setAddressMode('manual')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                    addressMode === 'manual' ? 'bg-[#C0522B] text-white' : 'bg-[#F5ECD8] text-[#2C1A0E]'
+                  }`}
+                >
+                  Enter Manually
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddressMode('map')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                    addressMode === 'map' ? 'bg-[#C0522B] text-white' : 'bg-[#F5ECD8] text-[#2C1A0E]'
+                  }`}
+                >
+                  Use Map 📍
+                </button>
+              </div>
+              {addressMode === 'map' && (
+                <div className="mb-4">
+                  <LocationPicker setAddr={setAddr} />
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Full Name *" error={errors.fullName}>
                   <input value={addr.fullName} onChange={e => setA('fullName', e.target.value)} type="text" placeholder="Aapka Naam" className={inputCls} />
@@ -385,18 +420,27 @@ export default function Checkout() {
               {/* Cart items */}
               <div className="space-y-3 mb-5">
                 {cart.map(item => (
-                  <div key={item._id} className="flex gap-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#F5ECD8] shrink-0 border border-[#E8D5B0]">
-                      {item.images?.[0]
-                        ? <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-xl">🎨</div>
-                      }
+                  <div key={item._id} className="flex flex-col gap-2">
+                    <div className="flex gap-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#F5ECD8] shrink-0 border border-[#E8D5B0]">
+                        {item.images?.[0]
+                          ? <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-xl">🎨</div>
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[#2C1A0E] line-clamp-1">{item.name}</p>
+                        <p className="text-xs text-[#7B5C3A]">Qty: {item.quantity} · {item.category}</p>
+                      </div>
+                      <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#2C1A0E] line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-[#7B5C3A]">Qty: {item.quantity} · {item.category}</p>
-                    </div>
-                    <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                    <textarea
+                      rows={2}
+                      value={customizationNotes[item._id] || ''}
+                      onChange={e => setCustomizationNotes(n => ({ ...n, [item._id]: e.target.value }))}
+                      placeholder="Add customization note (optional)"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-[#E8D5B0] bg-[#FDF6EC] text-[#2C1A0E] placeholder-[#B09070] focus:outline-none focus:border-[#C0522B] focus:ring-1 focus:ring-[#C0522B]/20 resize-none transition-all"
+                    />
                   </div>
                 ))}
               </div>

@@ -36,6 +36,48 @@ router.post("/upload/profile-image", protect, uploadImage("users").single("profi
     }
 });
 
+// POST /api/users/addresses — add a new address
+router.post("/addresses", protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        user.addresses.push(req.body);
+        await user.save();
+        res.json(user.addresses);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// PUT /api/users/addresses/:index — edit address at index
+router.put("/addresses/:index", protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const idx = parseInt(req.params.index);
+        if (idx < 0 || idx >= user.addresses.length)
+            return res.status(404).json({ message: 'Address not found' });
+        user.addresses[idx] = { ...user.addresses[idx].toObject(), ...req.body };
+        await user.save();
+        res.json(user.addresses);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// DELETE /api/users/addresses/:index — delete address at index
+router.delete("/addresses/:index", protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const idx = parseInt(req.params.index);
+        if (idx < 0 || idx >= user.addresses.length)
+            return res.status(404).json({ message: 'Address not found' });
+        user.addresses.splice(idx, 1);
+        await user.save();
+        res.json(user.addresses);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post("/wishlist/:productId", protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);

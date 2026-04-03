@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, X, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { categories } from '../data/sampleData';
-import { getProducts } from '../services/api';
+import { getProducts, getBestSellers } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { SectionHeader } from '../components/UI';
 
@@ -40,13 +40,20 @@ export default function Products() {
 
   // API integrated here
   const [products, setProducts] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setLoading(true);
-    getProducts()
-      .then(data => setProducts(Array.isArray(data) ? data : []))
+    Promise.all([
+      getProducts(),
+      getBestSellers(),
+    ])
+      .then(([allData, bsData]) => {
+        setProducts(Array.isArray(allData) ? allData : []);
+        setBestSellers(Array.isArray(bsData) ? bsData : []);
+      })
       .catch(() => setError('Failed to load products.'))
       .finally(() => setLoading(false));
   }, []);
@@ -140,6 +147,25 @@ export default function Products() {
             </button>
           )}
         </div>
+
+        {/* Best Sellers Section */}
+        {!loading && bestSellers.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">🏆</span>
+              <h2 className="font-display text-xl font-bold text-[#2C1A0E]">Best Sellers</h2>
+              <span className="text-xs font-bold bg-[#C0522B] text-white px-2.5 py-1 rounded-full">Top Picks</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {bestSellers.map((product, i) => (
+                <motion.div key={product._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                  <ProductCard product={{ ...product, id: product._id, image: product.images?.[0] || product.image, artisan: product.artisan || product.artist?.name, isBestSeller: true }} />
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-6 border-t border-[#E8D5B0]/60" />
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">

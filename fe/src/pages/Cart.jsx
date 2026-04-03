@@ -56,16 +56,26 @@ export default function Cart() {
                             <h3 className="font-display font-bold text-[#2C1A0E] text-sm leading-snug hover:text-[#C0522B] transition-colors line-clamp-2">{item.name}</h3>
                           </Link>
                           <p className="text-xs text-[#7B5C3A] mt-0.5">{item.category}</p>
+                          {/* Customization tags */}
+                          {item.customizations && Object.keys(item.customizations).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {Object.entries(item.customizations).map(([k, v]) => (
+                                <span key={k} className="text-[10px] bg-[#C0522B]/10 text-[#C0522B] px-2 py-0.5 rounded-full font-semibold">
+                                  {k}: {v}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <button onClick={() => removeFromCart(item._id)} className="text-[#7B5C3A] hover:text-red-500 transition-colors shrink-0 p-1">
+                        <button onClick={() => removeFromCart(item._cartItemId || item._id)} className="text-[#7B5C3A] hover:text-red-500 transition-colors shrink-0 p-1">
                           <Trash2 size={15} />
                         </button>
                       </div>
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center border border-[#E8D5B0] rounded-full overflow-hidden">
-                          <button onClick={() => updateQty(item._id, -1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">−</button>
+                          <button onClick={() => updateQty(item._cartItemId || item._id, -1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">−</button>
                           <span className="px-3 py-1.5 text-sm font-bold text-[#2C1A0E]">{item.quantity}</span>
-                          <button onClick={() => updateQty(item._id, 1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">+</button>
+                          <button onClick={() => updateQty(item._cartItemId || item._id, 1)} className="px-3 py-1.5 text-[#5C3317] hover:bg-[#F5ECD8] transition-colors text-sm font-bold">+</button>
                         </div>
                         <span className="font-display font-bold text-[#2C1A0E]">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                       </div>

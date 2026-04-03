@@ -6,6 +6,7 @@ import { getProduct, getProducts } from '../services/api';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 import { StarRating, Badge } from '../components/UI';
+import CustomizationForm from '../components/CustomizationForm';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -14,9 +15,19 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
-  const [customNote, setCustomNote] = useState('');
+  const [customValues, setCustomValues] = useState({});
+  const [customErrors, setCustomErrors] = useState({});
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
+
+  // Live price: base + sum of priceAdd for chosen options
+  const livePrice = product ? (() => {
+    if (!product.isCustomizable) return product.price;
+    const extra = (product.customizationOptions || []).reduce((sum, opt) => {
+      return customValues[opt.name] && opt.priceAdd ? sum + opt.priceAdd : sum;
+    }, 0);
+    return product.price + extra;
+  })() : 0;
 
   useEffect(() => {
     getProduct(id)
@@ -32,8 +43,24 @@ export default function ProductDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const validateCustomizations = () => {
+    if (!product?.isCustomizable) return true;
+    const errs = {};
+    (product.customizationOptions || []).forEach(opt => {
+      if (opt.required && !customValues[opt.name]?.toString().trim()) {
+        errs[opt.name] = `${opt.name} is required`;
+      }
+      if (customValues[opt.name] && opt.options?.length && !opt.options.includes(customValues[opt.name])) {
+        errs[opt.name] = `Invalid option selected for ${opt.name}`;
+      }
+    });
+    setCustomErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleAdd = () => {
-    addToCart({ ...product, quantity: qty });
+    if (!validateCustomizations()) return;
+    addToCart({ ...product, price: livePrice, quantity: qty }, product.isCustomizable ? customValues : {});
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -94,7 +121,7 @@ export default function ProductDetail() {
           <div>
             <div className="flex flex-wrap gap-2 mb-4">
               {product.category && <Badge variant="default">{product.category}</Badge>}
-              {product.customizable && <Badge variant="green"><Sparkles size={10} /> Customizable</Badge>}
+              {product.isCustomizable && <Badge variant="green"><Sparkles size={10} /> Customizable</Badge>}
               {product.stock === 0 && <Badge variant="maroon">Sold Out</Badge>}
             </div>
 
@@ -107,10 +134,25 @@ export default function ProductDetail() {
             </div>
 
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="font-display text-4xl font-bold text-[#2C1A0E]">₹{product.price?.toLocaleString('en-IN')}</span>
+              <span className="font-display text-4xl font-bold text-[#2C1A0E]">₹{livePrice?.toLocaleString('en-IN')}</span>
+              {livePrice !== product.price && (
+                <span className="text-sm text-[#7B5C3A] line-through">₹{product.price?.toLocaleString('en-IN')}</span>
+              )}
             </div>
 
             <p className="text-[#5C3317] leading-relaxed mb-6">{product.description}</p>
+
+            {/* Customization */}
+            {product.isCustomizable && product.customizationOptions?.length > 0 && (
+              <div className="mb-5">
+                <CustomizationForm
+                  options={product.customizationOptions}
+                  values={customValues}
+                  onChange={setCustomValues}
+                  errors={customErrors}
+                />
+              </div>
+            )}
 
             {/* Qty + Add to Cart */}
             <div className="flex items-center gap-4 mb-4">
@@ -133,27 +175,23 @@ export default function ProductDetail() {
               </button>
             </div>
 
-            {/* Customization */}
-            {product.customizable && (
-              <div className="bg-[#F5ECD8]/60 border border-[#E8D5B0] rounded-2xl p-5 mb-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare size={15} className="text-[#C0522B]" />
-                  <h4 className="font-semibold text-[#2C1A0E] text-sm">Customization Request करें</h4>
+            {/* Stock info / Customize CTA */}
+            {product.isCustomizable ? (
+              <div className="flex items-start gap-3 bg-[#C0522B]/8 border border-[#C0522B]/20 rounded-2xl p-4">
+                <Sparkles size={18} className="text-[#C0522B] mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-[#C0522B]">Customize this product</p>
+                  <p className="text-xs text-[#7B5C3A] mt-0.5">Handmade — each piece is unique. Fill in your preferences above before adding to cart.</p>
                 </div>
-                <textarea value={customNote} onChange={e => setCustomNote(e.target.value)}
-                  placeholder="रंग, साइज़, नाम, संदेश... (Color, size, name, message...)"
-                  rows={3}
-                  className="w-full text-sm bg-white border border-[#E8D5B0] rounded-xl px-4 py-3 text-[#2C1A0E] placeholder-[#7B5C3A] focus:outline-none focus:border-[#C0522B] resize-none" />
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 bg-[#1E4D2B]/8 border border-[#1E4D2B]/20 rounded-2xl p-4">
+                <Leaf size={18} className="text-[#1E4D2B] mt-0.5 shrink-0" />
+                <p className="text-sm text-[#1E4D2B] leading-relaxed">
+                  {product.stock > 0 ? 'Handmade — each piece is unique.' : 'Currently out of stock. Check back soon!'}
+                </p>
               </div>
             )}
-
-            {/* Stock info */}
-            <div className="flex items-start gap-3 bg-[#1E4D2B]/8 border border-[#1E4D2B]/20 rounded-2xl p-4">
-              <Leaf size={18} className="text-[#1E4D2B] mt-0.5 shrink-0" />
-              <p className="text-sm text-[#1E4D2B] leading-relaxed">
-                {product.stock > 0 ? `${product.stock} items in stock. Handmade — each piece is unique.` : 'Currently out of stock. Check back soon!'}
-              </p>
-            </div>
           </div>
         </div>
 

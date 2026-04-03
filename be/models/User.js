@@ -19,17 +19,24 @@ const userSchema = new mongoose.Schema({
         required: true
     },
 
-    // Address
+    // Address (single - legacy)
     address: {
-        addressLine: String,
-        city: String,
-        state: String,
-        pincode: String,
-        country: {
-            type: String,
-            default: "India"
-        }
+        addressLine: { type: String, default: '' },
+        city:        { type: String, default: '' },
+        state:       { type: String, default: '' },
+        pincode:     { type: String, default: '' },
+        lat:         { type: Number, default: null },
+        lng:         { type: Number, default: null },
     },
+
+    // Multiple addresses
+    addresses: [{
+        label:       { type: String, default: 'Home' },
+        addressLine: { type: String, default: '' },
+        city:        { type: String, default: '' },
+        state:       { type: String, default: '' },
+        pincode:     { type: String, default: '' },
+    }],
 
     profileImage: String,
 

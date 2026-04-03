@@ -37,7 +37,21 @@ const productSchema = new mongoose.Schema({
     numReviews: {
         type: Number,
         default: 0
-    }
+    },
+
+    isCustomizable: {
+        type: Boolean,
+        default: false
+    },
+    customizationOptions: [
+        {
+            name:     { type: String, required: true },
+            type:     { type: String, enum: ['dropdown', 'radio', 'text', 'number'], required: true },
+            required: { type: Boolean, default: false },
+            options:  [String],
+            priceAdd: { type: Number, default: 0 },
+        }
+    ]
 
 }, {
     timestamps: true

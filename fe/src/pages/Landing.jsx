@@ -44,10 +44,21 @@ export default function Landing() {
   const [showAllStates, setShowAllStates] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [featuredArtisans, setFeaturedArtisans] = useState([]);
+  const [statesWithCounts, setStatesWithCounts] = useState(states);
 
   useEffect(() => {
     getProducts().then(data => setFeaturedProducts(Array.isArray(data) ? data.slice(0, 4) : [])).catch(() => {});
-    getArtisans().then(data => setFeaturedArtisans(Array.isArray(data) ? data.slice(0, 3) : [])).catch(() => {});
+    getArtisans().then(data => {
+      const allArtisans = Array.isArray(data) ? data : [];
+      setFeaturedArtisans(allArtisans.slice(0, 3));
+      // Count artisans per state and merge into states data
+      const countMap = {};
+      allArtisans.forEach(a => {
+        const st = a.address?.state || a.state || '';
+        if (st) countMap[st] = (countMap[st] || 0) + 1;
+      });
+      setStatesWithCounts(states.map(s => ({ ...s, artisanCount: countMap[s.name] || 0 })));
+    }).catch(() => {});
   }, []);
 
   return (
@@ -125,7 +136,6 @@ export default function Landing() {
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-[#2C1A0E] text-xs group-hover:text-[#C0522B] transition-colors leading-tight">{cat.name}</p>
-                    <p className="text-[10px] text-[#7B5C3A]">{cat.count}</p>
                   </div>
                 </Link>
               </motion.div>
@@ -141,7 +151,7 @@ export default function Landing() {
             title="Crafts from Every Corner of Bharat"
             subtitle="Each Indian state has a unique craft tradition. Explore them all." />
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            {(showAllStates ? states : states.slice(0, 8)).map((s, i) => (
+            {(showAllStates ? statesWithCounts : statesWithCounts.slice(0, 8)).map((s, i) => (
               <motion.div key={s.name} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.07 }}>
                 <Link to={`/states/${encodeURIComponent(s.name)}`}
@@ -150,7 +160,7 @@ export default function Landing() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1E0E06]/80 via-[#1E0E06]/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-2.5 text-center">
                     <p className="text-white font-bold text-xs leading-tight">{s.name}</p>
-                    <p className="text-[#E8D5B0] text-[9px] leading-tight mt-0.5">{s.products} items</p>
+                    <p className="text-[#E8D5B0] text-[9px] leading-tight mt-0.5">{s.artisanCount !== undefined ? `${s.artisanCount} artisans` : ''}</p>
                   </div>
                 </Link>
               </motion.div>
@@ -351,7 +361,7 @@ export default function Landing() {
                   </li>
                 ))}
               </ul>
-              <Link to="/products"
+              <Link to="/workshops"
                 className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-8 py-4 rounded-full font-bold hover:bg-[#9A3E1E] transition-all shadow-md">
                 Workshops देखें <ArrowRight size={18} />
               </Link>

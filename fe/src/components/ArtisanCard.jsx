@@ -17,7 +17,7 @@ export default function ArtisanCard({ artisan }) {
       transition={{ duration: 0.2 }}
       className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 border border-[#E8D5B0]/50"
     >
-      {/* Cover */}
+      {/* Cover — position:relative so avatar can be anchored inside */}
       <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#C0522B] to-[#7B1C2E]">
         {coverImg && (
           <img src={coverImg} alt={artisan.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -31,22 +31,21 @@ export default function ArtisanCard({ artisan }) {
           </div>
         )}
         {artisan.isVerified && (
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 left-3">
             <span className="text-[10px] bg-[#1E4D2B] text-white px-2 py-0.5 rounded-full font-semibold">✓ Verified</span>
           </div>
         )}
+        {/* FIXED: top-right positioning using absolute inside relative container */}
+        <div className="absolute top-3 right-3 w-16 h-16 rounded-full border-[3px] border-white shadow-md overflow-hidden bg-[#C0522B] flex items-center justify-center text-white font-bold text-lg font-display">
+          {profileImg
+            ? <img src={profileImg} alt={artisan.name} className="w-full h-full object-cover" />
+            : initials
+          }
+        </div>
       </div>
 
-      {/* Avatar + Info */}
-      <div className="px-5 pb-5">
-        <div className="-mt-8 mb-3">
-          <div className="w-16 h-16 rounded-full border-[3px] border-white shadow-md overflow-hidden bg-[#C0522B] flex items-center justify-center text-white font-bold text-lg font-display">
-            {profileImg
-              ? <img src={profileImg} alt={artisan.name} className="w-full h-full object-cover" />
-              : initials
-            }
-          </div>
-        </div>
+      {/* Info */}
+      <div className="px-5 pb-5 pt-3">
         <h3 className="font-display text-[#2C1A0E] font-bold text-base mb-0.5">{artisan.name}</h3>
         <p className="text-xs text-[#C0522B] font-semibold mb-1">{craft}</p>
         <div className="flex items-center gap-1 text-xs text-[#7B5C3A] mb-3">

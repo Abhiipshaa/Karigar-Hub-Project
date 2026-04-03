@@ -113,16 +113,27 @@ export default function OrderConfirmation() {
                 <Package size={12} /> Items Ordered
               </p>
               <div className="space-y-3">
-                {products.map(item => (
-                  <div key={item.id} className="flex gap-3 items-center">
-                    <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-cover shrink-0 border border-[#E8D5B0]" />
+                {products.map((item, idx) => {
+                  // Safe field resolution with fallbacks
+                  const imgSrc  = item?.image || item?.imageUrl || item?.product?.image || item?.product?.images?.[0] || '';
+                  const price   = Number(item?.price || item?.product?.price || 0);
+                  const qty     = Number(item?.quantity || 1);
+                  const total   = isNaN(price * qty) ? 0 : price * qty;
+                  console.log('Order item data:', item);
+                  return (
+                  <div key={item.id || item._id || idx} className="flex gap-3 items-center">
+                    {imgSrc
+                      ? <img src={imgSrc} alt={item.name || 'Product'} className="w-12 h-12 rounded-xl object-cover shrink-0 border border-[#E8D5B0]" />
+                      : <div className="w-12 h-12 rounded-xl shrink-0 border border-[#E8D5B0] bg-[#F5ECD8] flex items-center justify-center text-xl">🎨</div>
+                    }
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#2C1A0E] line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-[#7B5C3A]">Qty: {item.quantity} · by {item.artisan}</p>
+                      <p className="text-sm font-semibold text-[#2C1A0E] line-clamp-1">{item.name || 'Product'}</p>
+                      <p className="text-xs text-[#7B5C3A]">Qty: {qty} · by {item.artisan || item.product?.artist?.name || 'Karigar'}</p>
                     </div>
-                    <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                    <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{total.toLocaleString('en-IN')}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -149,7 +160,7 @@ export default function OrderConfirmation() {
               {/* Total */}
               <div className="flex justify-between items-center">
                 <span className="font-bold text-[#2C1A0E]">Total Paid</span>
-                <span className="font-display text-2xl font-bold text-[#2C1A0E]">₹{totalPrice.toLocaleString('en-IN')}</span>
+                <span className="font-display text-2xl font-bold text-[#2C1A0E]">₹{(Number(totalPrice) || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>

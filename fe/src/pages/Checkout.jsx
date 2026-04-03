@@ -6,7 +6,7 @@ import {
   CreditCard, CheckCircle2, XCircle, Loader2,
   ShieldCheck, Zap, Truck,
 } from 'lucide-react';
-import { placeOrder, createPaymentOrder, verifyPayment } from '../services/api';
+import { placeOrder, createPaymentOrder, verifyPayment, saveAddress } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -139,6 +139,9 @@ export default function Checkout() {
               };
               const order = await placeOrder(orderPayload);
 
+              // Save address to user profile after successful payment
+              saveAddress(addr).catch(() => {});
+
               console.log('Payment successful:', {
                 payment_id: response.razorpay_payment_id,
                 status: 'success',
@@ -147,12 +150,23 @@ export default function Checkout() {
               setPayStatus('success');
               clearCart();
 
+              // Enrich order products with cart data (image, name, price, artisan)
+              const enrichedProducts = cart.map(i => ({
+                id:       i._id,
+                name:     i.name || '',
+                price:    Number(i.price) || 0,
+                quantity: Number(i.quantity) || 1,
+                image:    i.images?.[0] || i.image || '',
+                artisan:  i.artisan || i.artist?.name || '',
+              }));
+
               setTimeout(() => {
                 navigate('/order-confirmation', {
                   state: {
                     order: {
                       ...order,
                       orderId: order._id,
+                      products: enrichedProducts,
                       shippingAddress: addr,
                       paymentMethod: 'razorpay',
                       paymentId: response.razorpay_payment_id,

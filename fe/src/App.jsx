@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Landing from './pages/Landing';
@@ -22,7 +23,25 @@ import RefundPolicy from './pages/RefundPolicy';
 import UserProfile from './pages/UserProfile';
 import States from './pages/States';
 import StateKarigars from './pages/StateKarigars';
+import SuccessStories from './pages/SuccessStories';
+import Workshops from './pages/Workshops';
 
+
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [location.pathname, location.search]);
+  return null;
+}
+
+function AnimatedPage({ children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}>
+      {children}
+    </motion.div>
+  );
+}
 
 const noLayoutRoutes = ['/login', '/register', '/dashboard'];  // dashboard/* also matched via startsWith
 
@@ -32,38 +51,34 @@ function AppLayout() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <ScrollToTop />
       {!hideLayout && <Navbar />}
       <main className="flex-1">
-        <AnimatePresence mode="wait">
-          <motion.div key={location.pathname}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}>
-            <Routes location={location}>
-              <Route path="/" element={<Landing />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/products/:id" element={<ProductDetail />} />
-              <Route path="/artisans" element={<Artisans />} />
-              <Route path="/artisans/:id" element={<ArtisanProfile />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/products" element={<ManageProducts />} />
-              <Route path="/dashboard/products/add" element={<AddProduct />} />
-
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/wishlist" element={<Wishlist />} />
-              <Route path="/order-confirmation" element={<OrderConfirmation />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/refund-policy" element={<RefundPolicy />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/states" element={<States />} />
-              <Route path="/states/:state" element={<StateKarigars />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </motion.div>
-        </AnimatePresence>
+        <Routes location={location}>
+          <Route path="/" element={<AnimatedPage><Landing /></AnimatedPage>} />
+          <Route path="/products" element={<AnimatedPage><Products /></AnimatedPage>} />
+          <Route path="/products/:id" element={<AnimatedPage><ProductDetail /></AnimatedPage>} />
+          <Route path="/artisans" element={<AnimatedPage><Artisans /></AnimatedPage>} />
+          <Route path="/artisans/:id" element={<AnimatedPage><ArtisanProfile /></AnimatedPage>} />
+          <Route path="/dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+          <Route path="/dashboard/products" element={<AnimatedPage><ManageProducts /></AnimatedPage>} />
+          <Route path="/dashboard/products/add" element={<AnimatedPage><AddProduct /></AnimatedPage>} />
+          <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
+          <Route path="/register" element={<AnimatedPage><Register /></AnimatedPage>} />
+          <Route path="/cart" element={<AnimatedPage><Cart /></AnimatedPage>} />
+          <Route path="/checkout" element={<AnimatedPage><Checkout /></AnimatedPage>} />
+          <Route path="/wishlist" element={<AnimatedPage><Wishlist /></AnimatedPage>} />
+          <Route path="/order-confirmation" element={<AnimatedPage><OrderConfirmation /></AnimatedPage>} />
+          <Route path="/orders" element={<AnimatedPage><Orders /></AnimatedPage>} />
+          <Route path="/terms" element={<AnimatedPage><Terms /></AnimatedPage>} />
+          <Route path="/refund-policy" element={<AnimatedPage><RefundPolicy /></AnimatedPage>} />
+          <Route path="/profile" element={<AnimatedPage><UserProfile /></AnimatedPage>} />
+          <Route path="/states" element={<AnimatedPage><States /></AnimatedPage>} />
+          <Route path="/states/:state" element={<AnimatedPage><StateKarigars /></AnimatedPage>} />
+          <Route path="/stories" element={<AnimatedPage><SuccessStories /></AnimatedPage>} />
+          <Route path="/workshops" element={<AnimatedPage><Workshops /></AnimatedPage>} />
+          <Route path="*" element={<AnimatedPage><NotFound /></AnimatedPage>} />
+        </Routes>
       </main>
       {!hideLayout && <Footer />}
     </div>

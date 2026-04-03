@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { categories } from '../data/sampleData';
 import { getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -16,11 +17,26 @@ const sortOptions = [
 const states = ['All States', 'Odisha', 'Rajasthan', 'West Bengal', 'Gujarat', 'Uttar Pradesh', 'Bihar', 'Assam', 'Kashmir', 'Maharashtra', 'Tamil Nadu', 'Kerala', 'Karnataka', 'Andhra Pradesh', 'Telangana', 'Madhya Pradesh', 'Punjab', 'Himachal Pradesh', 'Uttarakhand', 'Jharkhand', 'Chhattisgarh', 'Manipur', 'Nagaland', 'Meghalaya', 'Tripura', 'Mizoram', 'Arunachal Pradesh', 'Sikkim', 'Goa'];
 
 export default function Products() {
+  const location = useLocation();
+
+  // Read query params from URL (set by footer links)
+  const params = new URLSearchParams(location.search);
+  const urlCategory = params.get('category') || 'All';
+  const urlState    = params.get('state')    || 'All States';
+
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [activeState, setActiveState] = useState('All States');
+  const [activeCategory, setActiveCategory] = useState(urlCategory);
+  const [activeState, setActiveState] = useState(urlState);
   const [sort, setSort] = useState('featured');
   const [maxPrice, setMaxPrice] = useState(10000);
+
+  // Re-apply filters whenever URL query params change (e.g. footer link clicked)
+  useEffect(() => {
+    const p = new URLSearchParams(location.search);
+    setActiveCategory(p.get('category') || 'All');
+    setActiveState(p.get('state') || 'All States');
+    setSearch('');
+  }, [location.search]);
 
   // API integrated here
   const [products, setProducts] = useState([]);

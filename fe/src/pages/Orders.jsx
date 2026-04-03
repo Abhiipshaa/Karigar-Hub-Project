@@ -1,58 +1,10 @@
-// TODO: Replace with backend API later
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ClipboardList, Package, ArrowRight, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
-import { products } from '../data/sampleData';
+import { getMyOrders } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-// ─── Dummy orders ─────────────────────────────────────────────────────────────
-// TODO: Replace with backend API later — GET /api/user/orders
-const DUMMY_ORDERS = [
-  {
-    orderId:    '#KH-7821',
-    placedAt:   '2025-06-12T10:30:00.000Z',
-    products:   [{ ...products[0], quantity: 1 }, { ...products[2], quantity: 2 }],
-    totalPrice: 5600,
-    shippingAddress: { fullName: 'Ananya Sharma', city: 'Delhi', state: 'Delhi', pincode: '110001' },
-    paymentMethod: 'upi',
-    isPaid:      true,
-    isDelivered: false,
-  },
-  {
-    orderId:    '#KH-7798',
-    placedAt:   '2025-05-28T14:15:00.000Z',
-    products:   [{ ...products[3], quantity: 1 }],
-    totalPrice: 2800,
-    shippingAddress: { fullName: 'Ananya Sharma', city: 'Delhi', state: 'Delhi', pincode: '110001' },
-    paymentMethod: 'card',
-    isPaid:      true,
-    isDelivered: true,
-  },
-  {
-    orderId:    '#KH-7754',
-    placedAt:   '2025-05-10T09:00:00.000Z',
-    products:   [{ ...products[6], quantity: 3 }],
-    totalPrice: 2670,
-    shippingAddress: { fullName: 'Ananya Sharma', city: 'Delhi', state: 'Delhi', pincode: '110001' },
-    paymentMethod: 'cod',
-    isPaid:      false,
-    isDelivered: false,
-  },
-  {
-    orderId:    '#KH-7701',
-    placedAt:   '2025-04-18T16:45:00.000Z',
-    products:   [{ ...products[1], quantity: 1 }, { ...products[7], quantity: 1 }],
-    totalPrice: 2530,
-    shippingAddress: { fullName: 'Ananya Sharma', city: 'Delhi', state: 'Delhi', pincode: '110001' },
-    paymentMethod: 'upi',
-    isPaid:      true,
-    isDelivered: true,
-  },
-];
-
-const PAY_LABEL = { upi: 'UPI', card: 'Card', cod: 'COD' };
-
-// ─── Status badge ─────────────────────────────────────────────────────────────
 function Badge({ label, color }) {
   const cls = {
     green:  'bg-green-100  text-green-700  border-green-200',
@@ -67,10 +19,13 @@ function Badge({ label, color }) {
   );
 }
 
-// ─── Single order card ────────────────────────────────────────────────────────
 function OrderCard({ order, index }) {
   const [expanded, setExpanded] = useState(false);
-  const date = new Date(order.placedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const date     = new Date(order.placedAt || order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const orderId  = order.orderId || order._id;
+  const products = order.products || order.items || [];
+  const addr     = order.shippingAddress || {};
+  const PAY_LABEL = { upi: 'UPI', card: 'Card', cod: 'COD', razorpay: 'Razorpay' };
 
   return (
     <motion.div
@@ -79,18 +34,19 @@ function OrderCard({ order, index }) {
       transition={{ delay: index * 0.07 }}
       className="bg-white rounded-2xl border border-[#E8D5B0]/60 overflow-hidden hover:shadow-md transition-shadow">
 
-      {/* Card header — always visible */}
       <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
 
         {/* Product thumbnails */}
         <div className="flex -space-x-2 shrink-0">
-          {order.products.slice(0, 3).map((p, i) => (
-            <img key={i} src={p.image} alt={p.name}
-              className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" />
-          ))}
-          {order.products.length > 3 && (
+          {products.slice(0, 3).map((p, i) => {
+            const imgSrc = p.image || p.product?.images?.[0] || '';
+            return imgSrc
+              ? <img key={i} src={imgSrc} alt={p.name || 'Product'} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" />
+              : <div key={i} className="w-12 h-12 rounded-xl bg-[#F5ECD8] border-2 border-white flex items-center justify-center text-lg">🎨</div>;
+          })}
+          {products.length > 3 && (
             <div className="w-12 h-12 rounded-xl bg-[#F5ECD8] border-2 border-white flex items-center justify-center text-xs font-bold text-[#7B5C3A]">
-              +{order.products.length - 3}
+              +{products.length - 3}
             </div>
           )}
         </div>
@@ -98,23 +54,23 @@ function OrderCard({ order, index }) {
         {/* Order meta */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="font-display font-bold text-[#C0522B] text-sm">{order.orderId}</span>
+            <span className="font-display font-bold text-[#C0522B] text-sm">{String(orderId).slice(-8).toUpperCase()}</span>
             <span className="text-[#E8D5B0]">·</span>
             <span className="text-xs text-[#7B5C3A]">{date}</span>
           </div>
           <p className="text-sm text-[#5C3317] line-clamp-1">
-            {order.products.map(p => p.name).join(', ')}
+            {products.map(p => p.name || p.product?.name || 'Product').join(', ')}
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <Badge label={order.isPaid ? '✓ Paid' : '⏳ Payment Pending'} color={order.isPaid ? 'green' : 'yellow'} />
             <Badge label={order.isDelivered ? '✓ Delivered' : '🚚 Processing'} color={order.isDelivered ? 'green' : 'blue'} />
-            <Badge label={PAY_LABEL[order.paymentMethod]} color="gray" />
+            <Badge label={PAY_LABEL[order.paymentMethod] || order.paymentMethod || 'Online'} color="gray" />
           </div>
         </div>
 
         {/* Total + expand */}
         <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-1 shrink-0">
-          <span className="font-display text-xl font-bold text-[#2C1A0E]">₹{order.totalPrice.toLocaleString('en-IN')}</span>
+          <span className="font-display text-xl font-bold text-[#2C1A0E]">₹{(Number(order.totalPrice) || 0).toLocaleString('en-IN')}</span>
           <button onClick={() => setExpanded(e => !e)}
             className="flex items-center gap-1 text-xs text-[#C0522B] font-semibold hover:underline transition-all">
             {expanded ? <><ChevronUp size={13} /> Less</> : <><ChevronDown size={13} /> Details</>}
@@ -126,70 +82,81 @@ function OrderCard({ order, index }) {
       {expanded && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
           className="border-t border-[#E8D5B0]/60 px-5 pb-5 pt-4 space-y-4">
-
-          {/* Items */}
           <div>
             <p className="text-xs font-bold text-[#7B5C3A] uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <Package size={11} /> Items
             </p>
             <div className="space-y-2.5">
-              {order.products.map(item => (
-                <div key={item.id} className="flex gap-3 items-center">
-                  <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-[#E8D5B0]" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#2C1A0E] line-clamp-1">{item.name}</p>
-                    <p className="text-xs text-[#7B5C3A]">Qty: {item.quantity} · {item.artisan}</p>
+              {products.map((item, idx) => {
+                const imgSrc = item.image || item.product?.images?.[0] || '';
+                const price  = Number(item.price || item.product?.price || 0);
+                const qty    = Number(item.quantity || 1);
+                return (
+                  <div key={item._id || idx} className="flex gap-3 items-center">
+                    {imgSrc
+                      ? <img src={imgSrc} alt={item.name || 'Product'} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-[#E8D5B0]" />
+                      : <div className="w-10 h-10 rounded-lg bg-[#F5ECD8] shrink-0 border border-[#E8D5B0] flex items-center justify-center">🎨</div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#2C1A0E] line-clamp-1">{item.name || item.product?.name || 'Product'}</p>
+                      <p className="text-xs text-[#7B5C3A]">Qty: {qty}</p>
+                    </div>
+                    <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{(price * qty).toLocaleString('en-IN')}</span>
                   </div>
-                  <span className="text-sm font-bold text-[#2C1A0E] shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-
-          {/* Shipping */}
-          <div className="flex items-start gap-2 text-sm text-[#5C3317]">
-            <MapPin size={14} className="text-[#C0522B] mt-0.5 shrink-0" />
-            <span>
-              {order.shippingAddress.fullName} · {order.shippingAddress.city}, {order.shippingAddress.state} – {order.shippingAddress.pincode}
-            </span>
-          </div>
+          {(addr.city || addr.addressLine || addr.fullName) && (
+            <div className="flex items-start gap-2 text-sm text-[#5C3317]">
+              <MapPin size={14} className="text-[#C0522B] mt-0.5 shrink-0" />
+              <span>{[addr.fullName, addr.addressLine || addr.line1, addr.city, addr.state, addr.pincode].filter(Boolean).join(' · ')}</span>
+            </div>
+          )}
         </motion.div>
       )}
     </motion.div>
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Orders() {
-  const [filter, setFilter] = useState('all');
+  const { user } = useAuth();
+  const [filter, setFilter]   = useState('all');
+  const [orders, setOrders]   = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: Replace with backend API later — GET /api/user/orders?status=filter
-  const filtered = DUMMY_ORDERS.filter(o => {
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    getMyOrders()
+      .then(data => setOrders(Array.isArray(data) ? data : []))
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  const filtered = orders.filter(o => {
     if (filter === 'active')    return !o.isDelivered;
-    if (filter === 'delivered') return o.isDelivered;
+    if (filter === 'delivered') return  o.isDelivered;
     if (filter === 'pending')   return !o.isPaid;
     return true;
   });
 
   const counts = {
-    all:       DUMMY_ORDERS.length,
-    active:    DUMMY_ORDERS.filter(o => !o.isDelivered).length,
-    delivered: DUMMY_ORDERS.filter(o => o.isDelivered).length,
-    pending:   DUMMY_ORDERS.filter(o => !o.isPaid).length,
+    all:       orders.length,
+    active:    orders.filter(o => !o.isDelivered).length,
+    delivered: orders.filter(o =>  o.isDelivered).length,
+    pending:   orders.filter(o => !o.isPaid).length,
   };
 
   return (
     <div className="min-h-screen bg-[#FDF6EC] pt-24 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
 
-        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <ClipboardList size={24} className="text-[#C0522B]" />
           <h1 className="font-display text-3xl font-bold text-[#2C1A0E]">My Orders</h1>
-          <span className="bg-[#C0522B] text-white text-xs font-bold px-2.5 py-1 rounded-full">{DUMMY_ORDERS.length}</span>
+          <span className="bg-[#C0522B] text-white text-xs font-bold px-2.5 py-1 rounded-full">{orders.length}</span>
         </div>
 
-        {/* Filter tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
             { key: 'all',       label: 'All Orders' },
@@ -208,8 +175,16 @@ export default function Orders() {
           ))}
         </div>
 
-        {/* Order list */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-[#E8D5B0]/50 p-5 animate-pulse flex gap-4">
+                <div className="flex gap-1">{[...Array(2)].map((_, j) => <div key={j} className="w-12 h-12 rounded-xl bg-[#E8D5B0]" />)}</div>
+                <div className="flex-1 space-y-2"><div className="h-4 bg-[#E8D5B0] rounded w-1/3" /><div className="h-3 bg-[#E8D5B0] rounded w-2/3" /></div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <ClipboardList size={48} className="text-[#E8D5B0] mx-auto mb-4" />
             <h2 className="font-display text-2xl font-bold text-[#2C1A0E] mb-2">कोई order नहीं</h2>
@@ -222,12 +197,11 @@ export default function Orders() {
         ) : (
           <div className="space-y-4">
             {filtered.map((order, i) => (
-              <OrderCard key={order.orderId} order={order} index={i} />
+              <OrderCard key={order._id || order.orderId || i} order={order} index={i} />
             ))}
           </div>
         )}
 
-        {/* Bottom CTA */}
         {filtered.length > 0 && (
           <div className="mt-8 text-center">
             <Link to="/products"

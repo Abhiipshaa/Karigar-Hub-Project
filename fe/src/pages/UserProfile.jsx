@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, MapPin, ShoppingBag, Heart, Edit3, Save, X, Package, LogOut, Camera, LayoutDashboard, Plus, Star, Briefcase } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { uploadUserProfileImage, uploadArtistProfileImage, getMyProducts, updateArtistProfile } from '../services/api';
+import { useCart } from '../context/CartContext';
+import { uploadUserProfileImage, uploadArtistProfileImage, getMyProducts, updateArtistProfile, updateUserProfile, getWishlist, getMyOrders } from '../services/api';
 
 export default function UserProfile() {
   const { user, logout, saveUser } = useAuth();
+  const { cart } = useCart();
   const navigate = useNavigate();
   const isArtist = user?.role === 'artist';
 
@@ -19,16 +21,40 @@ export default function UserProfile() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   const [products, setProducts] = useState([]);
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [orders, setOrders] = useState([]);
   const imgInputRef = useRef();
 
   const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    bio: user?.bio || '',
-    city: user?.address?.city || '',
-    state: user?.address?.state || '',
+    name: '', email: '', phone: '', bio: '', city: '', state: '',
   });
+
+  // Sync form when user data changes (e.g. after save)
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      name:  user.name  || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      bio:   user.bio   || '',
+      city:  user.address?.city  || '',
+      state: user.address?.state || '',
+    });
+    setProfileImage(user.profileImage || null);
+  }, [user]);
+
+  // Fetch real data on mount
+  useEffect(() => {
+    if (!user || isArtist) return;
+    // Wishlist count
+    getWishlist()
+      .then(data => setWishlistItems(data.wishlist || []))
+      .catch(() => {});
+    // Orders
+    getMyOrders()
+      .then(data => setOrders(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [user, isArtist]);
 
   useEffect(() => {
     if (isArtist && activeTab === 'My Products') {
@@ -53,13 +79,32 @@ export default function UserProfile() {
     }
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSave = async () => {
     try {
+      setSaving(true);
       if (isArtist) {
-        await updateArtistProfile({ name: form.name, phone: form.phone, bio: form.bio });
+        const updated = await updateArtistProfile({ name: form.name, phone: form.phone, bio: form.bio });
+        saveUser({ ...user, ...updated, token: localStorage.getItem('kh_token') });
+      } else {
+        const updated = await updateUserProfile({
+          name:  form.name,
+          phone: form.phone,
+          address: {
+            city:    form.city,
+            state:   form.state,
+            country: 'India',
+          },
+        });
+        saveUser({ ...user, ...updated, token: localStorage.getItem('kh_token') });
       }
       setEditing(false);
-    } catch {}
+    } catch (err) {
+      console.error('Save profile error:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const initials = user?.name
@@ -200,10 +245,10 @@ export default function UserProfile() {
               ) : (
                 <>
                   {[
-                    { icon: ShoppingBag, label: 'Total Orders', value: '0', color: 'bg-orange-50 text-[#C0522B]' },
-                    { icon: Heart, label: 'Wishlist Items', value: '0', color: 'bg-rose-50 text-rose-500' },
-                    { icon: Package, label: 'Delivered', value: '0', color: 'bg-green-50 text-green-600' },
-                    { icon: MapPin, label: 'Saved Addresses', value: '0', color: 'bg-blue-50 text-blue-500' },
+                    { icon: ShoppingBag, label: 'Total Orders',   value: orders.length,        color: 'bg-orange-50 text-[#C0522B]' },
+                    { icon: Heart,       label: 'Wishlist Items',  value: wishlistItems.length, color: 'bg-rose-50 text-rose-500' },
+                    { icon: Package,     label: 'In Cart',         value: cart.length,          color: 'bg-green-50 text-green-600' },
+                    { icon: MapPin,      label: 'Saved Address',   value: user?.address?.city ? '1' : '0', color: 'bg-blue-50 text-blue-500' },
                   ].map(({ icon: Icon, label, value, color }) => (
                     <div key={label} className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-5 flex items-center gap-4 shadow-sm">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
@@ -219,10 +264,10 @@ export default function UserProfile() {
                     <h3 className="font-semibold text-[#2C1A0E] mb-4">Personal Information</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {[
-                        { icon: User, label: 'Full Name', value: user?.name || '—' },
-                        { icon: Mail, label: 'Email', value: user?.email || '—' },
-                        { icon: Phone, label: 'Phone', value: user?.phone || '—' },
-                        { icon: MapPin, label: 'Location', value: user?.city ? `${user.city}, ${user.state}` : '—' },
+                        { icon: User,   label: 'Full Name', value: user?.name  || '—' },
+                        { icon: Mail,   label: 'Email',     value: user?.email || '—' },
+                        { icon: Phone,  label: 'Phone',     value: user?.phone || '—' },
+                        { icon: MapPin, label: 'Location',  value: user?.address?.city ? `${user.address.city}, ${user.address.state}` : '—' },
                       ].map(({ icon: Icon, label, value }) => (
                         <div key={label} className="flex items-center gap-3 p-3 rounded-xl bg-[#FDF6EC]">
                           <Icon size={16} className="text-[#C0522B]" />
@@ -292,25 +337,84 @@ export default function UserProfile() {
 
           {/* ── My Orders (User only) ── */}
           {activeTab === 'My Orders' && !isArtist && (
-            <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-8 text-center shadow-sm">
-              <p className="text-5xl mb-4">📦</p>
-              <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">No orders yet</h3>
-              <p className="text-[#7B5C3A] mb-6">Your orders will appear here once you start shopping.</p>
-              <Link to="/products" className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
-                Start Shopping
-              </Link>
+            <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-[#E8D5B0]/60 flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold text-[#2C1A0E]">My Orders ({orders.length})</h3>
+                <Link to="/orders" className="text-sm text-[#C0522B] font-semibold hover:underline">View All</Link>
+              </div>
+              {orders.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-5xl mb-4">📦</p>
+                  <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">No orders yet</h3>
+                  <p className="text-[#7B5C3A] mb-6">Your orders will appear here once you start shopping.</p>
+                  <Link to="/products" className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">Start Shopping</Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#E8D5B0]/60">
+                  {orders.slice(0, 5).map((order, i) => {
+                    const prods = order.products || [];
+                    const imgSrc = prods[0]?.image || prods[0]?.product?.images?.[0] || '';
+                    const date = new Date(order.placedAt || order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    return (
+                      <div key={order._id || i} className="flex items-center gap-4 p-4 hover:bg-[#FDF6EC] transition-colors">
+                        {imgSrc
+                          ? <img src={imgSrc} alt="order" className="w-12 h-12 rounded-xl object-cover border border-[#E8D5B0] shrink-0" />
+                          : <div className="w-12 h-12 rounded-xl bg-[#F5ECD8] border border-[#E8D5B0] shrink-0 flex items-center justify-center">🎨</div>
+                        }
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-[#C0522B]">{order._id?.slice(-8).toUpperCase()}</p>
+                          <p className="text-xs text-[#7B5C3A]">{prods.length} item{prods.length !== 1 ? 's' : ''} · {date}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-[#2C1A0E]">₹{(Number(order.totalPrice) || 0).toLocaleString('en-IN')}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ order.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }`}>
+                            {order.isPaid ? 'Paid' : 'Pending'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
           {/* ── Wishlist (User only) ── */}
           {activeTab === 'Wishlist' && !isArtist && (
-            <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 p-8 text-center shadow-sm">
-              <p className="text-5xl mb-4">🤍</p>
-              <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">Your wishlist is empty</h3>
-              <p className="text-[#7B5C3A] mb-6">Save items you love and come back to them anytime.</p>
-              <Link to="/products" className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">
-                Explore Products
-              </Link>
+            <div className="bg-white rounded-2xl border border-[#E8D5B0]/60 overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-[#E8D5B0]/60 flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold text-[#2C1A0E]">Wishlist ({wishlistItems.length})</h3>
+                <Link to="/wishlist" className="text-sm text-[#C0522B] font-semibold hover:underline">View All</Link>
+              </div>
+              {wishlistItems.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-5xl mb-4">🤍</p>
+                  <h3 className="font-display text-xl font-bold text-[#2C1A0E] mb-2">Wishlist is empty</h3>
+                  <p className="text-[#7B5C3A] mb-6">Save items you love and come back to them anytime.</p>
+                  <Link to="/products" className="inline-flex items-center gap-2 bg-[#C0522B] text-white px-6 py-3 rounded-full font-bold hover:bg-[#9A3E1E] transition-all">Explore Products</Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-5">
+                  {wishlistItems.map(item => {
+                    const imgSrc = item.images?.[0] || item.image || '';
+                    return (
+                      <Link key={item._id} to={`/products/${item._id}`}
+                        className="border border-[#E8D5B0]/60 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                        <div className="aspect-square bg-[#F5ECD8] overflow-hidden">
+                          {imgSrc
+                            ? <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center text-3xl">🎨</div>
+                          }
+                        </div>
+                        <div className="p-3">
+                          <p className="font-semibold text-[#2C1A0E] text-xs truncate">{item.name}</p>
+                          <p className="text-[#C0522B] font-bold text-sm">₹{(item.price || 0).toLocaleString('en-IN')}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -373,9 +477,9 @@ export default function UserProfile() {
                 className="flex-1 py-2.5 rounded-xl border border-[#E8D5B0] text-[#7B5C3A] text-sm font-semibold hover:border-[#C0522B] transition-all">
                 Cancel
               </button>
-              <button onClick={handleSave}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#C0522B] text-white text-sm font-semibold hover:bg-[#9A3E1E] transition-all">
-                <Save size={14} /> Save Changes
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#C0522B] text-white text-sm font-semibold hover:bg-[#9A3E1E] transition-all disabled:opacity-60">
+                <Save size={14} /> {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </motion.div>

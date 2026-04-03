@@ -90,8 +90,10 @@ export const getArtisan  = (id)          => req(`/artists/${id}`);
 export const updateArtistProfile = (body) => req('/artists/profile', { method: 'PUT', body: JSON.stringify(body) });
 
 // ── Wishlist ───────────────────────────────────────────────────────────────────
-export const toggleWishlist = (productId) => req(`/users/wishlist/${productId}`, { method: 'POST' });
-export const getWishlist    = ()           => req('/users/profile');
+export const toggleWishlist     = (productId) => req(`/users/wishlist/${productId}`, { method: 'POST' });
+export const getWishlist        = ()           => req('/users/profile');
+export const updateUserProfile  = (body)       => req('/users/profile', { method: 'PUT', body: JSON.stringify(body) });
+export const saveAddress        = (body)       => req('/users/address',  { method: 'PUT', body: JSON.stringify(body) });
 
 // ── Orders ───────────────────────────────────────────────────────────────────
 export const placeOrder   = (body)       => req('/orders',     { method: 'POST', body: JSON.stringify(body) });
